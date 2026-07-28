@@ -4,7 +4,7 @@
  * Date: 2026/7/28
  */
 
-package cn.rtast.peerlink.client.webrtc
+package cn.rtast.peerlink.client.webrtc.guest
 
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.RpcManager
@@ -114,20 +114,31 @@ class WebRTCClient(
     }
 
     fun handleRemoteAnswer(sdpAnswer: String) {
+        val pc = peerConnection ?: run {
+            RpcManager.rpcLogger.warn("[PeerLink Client] handleRemoteAnswer 失败: PeerConnection 为空")
+            return
+        }
+
+        if (pc.signalingState != RTCSignalingState.HAVE_LOCAL_OFFER) {
+            RpcManager.rpcLogger.warn("[PeerLink Client] 忽略无效状态下的 Answer 包，当前状态: ${pc.signalingState}")
+            return
+        }
+
         val sdp = RTCSessionDescription(RTCSdpType.ANSWER, sdpAnswer)
-        peerConnection?.setRemoteDescription(sdp, object : SetSessionDescriptionObserver {
+        pc.setRemoteDescription(sdp, object : SetSessionDescriptionObserver {
             override fun onSuccess() {
-                RpcManager.rpcLogger.info("成功设置 Remote Answer SDP")
+                RpcManager.rpcLogger.info("[PeerLink Client] 成功设置 Remote Answer SDP")
                 isRemoteDescriptionSet = true
-                while (pendingCandidates.isNotEmpty()) {
-                    pendingCandidates.poll()?.let { candidate ->
-                        peerConnection?.addIceCandidate(candidate)
+                synchronized(pendingCandidates) {
+                    while (pendingCandidates.isNotEmpty()) {
+                        val candidate = pendingCandidates.poll() ?: break
+                        pc.addIceCandidate(candidate)
                     }
                 }
             }
 
             override fun onFailure(error: String) {
-                RpcManager.rpcLogger.error("设置 Remote Answer 失败: $error")
+                RpcManager.rpcLogger.error("[PeerLink Client] 设置 Remote Answer 失败: $error")
             }
         })
     }
@@ -136,9 +147,7 @@ class WebRTCClient(
         val candidate = deserializeCandidate(candidateJson)
         if (isRemoteDescriptionSet) {
             peerConnection?.addIceCandidate(candidate)
-        } else {
-            pendingCandidates.add(candidate)
-        }
+        } else pendingCandidates.add(candidate)
     }
 
     fun close() {

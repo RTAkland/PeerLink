@@ -63,7 +63,19 @@ class WebRTCHostSession(
             }
 
             override fun onDataChannel(dataChannel: RTCDataChannel) {
-                setupDataChannelObserver(dataChannel)
+                if (dataChannel.state == RTCDataChannelState.OPEN) {
+                    onClientConnected(dataChannel)
+                } else {
+                    dataChannel.registerObserver(object : RTCDataChannelObserver {
+                        override fun onBufferedAmountChange(previousAmount: Long) {}
+                        override fun onMessage(buffer: RTCDataChannelBuffer) {}
+                        override fun onStateChange() {
+                            if (dataChannel.state == RTCDataChannelState.OPEN) {
+                                onClientConnected(dataChannel)
+                            }
+                        }
+                    })
+                }
             }
 
             override fun onIceConnectionChange(state: RTCIceConnectionState) {
@@ -100,16 +112,6 @@ class WebRTCHostSession(
             pendingCandidates.forEach { peerConnection?.addIceCandidate(it) }
             pendingCandidates.clear()
         }
-    }
-
-    private fun setupDataChannelObserver(dataChannel: RTCDataChannel) {
-        dataChannel.registerObserver(object : RTCDataChannelObserver {
-            override fun onBufferedAmountChange(previousAmount: Long) {}
-            override fun onMessage(buffer: RTCDataChannelBuffer) {}
-            override fun onStateChange() {
-                if (dataChannel.state == RTCDataChannelState.OPEN) onClientConnected(dataChannel)
-            }
-        })
     }
 
     fun close() {

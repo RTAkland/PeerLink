@@ -10,7 +10,8 @@ package cn.rtast.peerlink.client.webrtc.host
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
-import cn.rtast.peerlink.client.network.WebRTCNettyHandler
+import cn.rtast.peerlink.client.network.BackportedConnectionFactory
+import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
@@ -21,9 +22,10 @@ import dev.onvoid.webrtc.RTCDataChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import net.minecraft.network.Connection
 import net.minecraft.network.protocol.PacketFlow
+import net.minecraft.network.protocol.handshake.HandshakeProtocols
 import net.minecraft.server.MinecraftServer
+import net.minecraft.server.network.ServerHandshakePacketListenerImpl
 import net.minecraft.world.level.GameType
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.uuid.Uuid
@@ -100,12 +102,21 @@ object WebRTCHostManager {
     private fun injectClientDataChannelToIntegratedServer(dataChannel: RTCDataChannel) {
         val server = minecraft.singleplayerServer ?: return
         server.execute {
-            val embeddedChannel = io.netty.channel.embedded.EmbeddedChannel()
-            val nettyHandler = WebRTCNettyHandler(dataChannel)
-            embeddedChannel.pipeline().addLast("webrtc_bridge", nettyHandler)
-            val connection = Connection(PacketFlow.SERVERBOUND)
-            (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(embeddedChannel)
-            server.connection.connections.add(connection)
+            try {
+                val rtcChannel = WebRTCChannel(dataChannel)
+                val connection = BackportedConnectionFactory.fromChannel(
+                    rtcChannel, PacketFlow.SERVERBOUND, null
+                )
+                (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(rtcChannel)
+                connection.setupInboundProtocol(
+                    HandshakeProtocols.SERVERBOUND,
+                    ServerHandshakePacketListenerImpl(server, connection)
+                )
+                server.connection.connections.add(connection)
+                println("[PeerLink Host] 成功将 WebRTC 客户端 Connection 注入 IntegratedServer！")
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

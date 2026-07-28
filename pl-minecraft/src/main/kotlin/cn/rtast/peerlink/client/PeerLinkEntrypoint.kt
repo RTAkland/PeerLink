@@ -9,7 +9,7 @@ package cn.rtast.peerlink.client
 
 import cn.rtast.peerlink.client.screen.PeerLinkScreen
 import cn.rtast.peerlink.client.util.RpcManager
-import cn.rtast.peerlink.client.webrtc.WebRTCJoinManager
+import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
 import com.mojang.brigadier.arguments.StringArgumentType
 import net.fabricmc.api.ModInitializer

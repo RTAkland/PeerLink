@@ -5,31 +5,26 @@
  */
 
 
-package cn.rtast.peerlink.client.webrtc
+package cn.rtast.peerlink.client.webrtc.guest
 
-import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
-import cn.rtast.peerlink.client.network.WebRTCNettyHandler
-import cn.rtast.peerlink.client.util.RpcManager
 import dev.onvoid.webrtc.RTCDataChannel
 import dev.onvoid.webrtc.RTCDataChannelBuffer
 import dev.onvoid.webrtc.RTCDataChannelObserver
 import dev.onvoid.webrtc.RTCDataChannelState
-import io.netty.channel.ChannelFuture
-import io.netty.channel.embedded.EmbeddedChannel
 import net.minecraft.network.Connection
 import net.minecraft.network.chat.Component
-import java.net.InetSocketAddress
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
+
 
 object WebRTCClientManager {
 
     @Volatile
     private var activeWebRtcConnection: Connection? = null
 
+    @JvmStatic
     @Volatile
-    private var activeDataChannel: RTCDataChannel? = null
-    private var currentNettyHandler: WebRTCNettyHandler? = null
+    var activeDataChannel: RTCDataChannel? = null
 
     @Volatile
     private var dataChannelReadyFuture = CompletableFuture<Void>()
@@ -49,7 +44,6 @@ object WebRTCClientManager {
             }
 
             override fun onMessage(buffer: RTCDataChannelBuffer) {}
-
             override fun onBufferedAmountChange(previousAmount: Long) {}
         })
 
@@ -67,19 +61,6 @@ object WebRTCClientManager {
     }
 
     @JvmStatic
-    fun injectToConnection(connection: Connection): ChannelFuture {
-        val dataChannel = activeDataChannel
-            ?: throw IllegalStateException("[WebRTCClientManager] WebRTC DataChannel 无法通信")
-        val embeddedChannel = EmbeddedChannel()
-        val nettyHandler = WebRTCNettyHandler(dataChannel)
-        this.currentNettyHandler = nettyHandler
-        embeddedChannel.pipeline().addLast("webrtc_bridge", nettyHandler)
-        (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(embeddedChannel)
-        embeddedChannel.pipeline().fireChannelActive()
-        this.activeWebRtcConnection = connection
-        return embeddedChannel.newSucceededFuture()
-    }
-
     fun reset() {
         try {
             activeWebRtcConnection?.disconnect(Component.literal("WebRTC Session Reset"))
@@ -87,7 +68,6 @@ object WebRTCClientManager {
         } finally {
             activeWebRtcConnection = null
             activeDataChannel = null
-            currentNettyHandler = null
             dataChannelReadyFuture = CompletableFuture()
             println("[WebRTCClientManager] 已重置 WebRTC 客户端状态")
         }

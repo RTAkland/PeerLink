@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.peerlink.client.webrtc
+package cn.rtast.peerlink.client.webrtc.guest
 
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.RpcManager

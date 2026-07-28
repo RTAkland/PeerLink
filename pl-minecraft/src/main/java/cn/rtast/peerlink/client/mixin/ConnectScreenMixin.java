@@ -7,10 +7,14 @@
 
 package cn.rtast.peerlink.client.mixin;
 
-import cn.rtast.peerlink.client.webrtc.WebRTCClientManager;
+import cn.rtast.peerlink.client.network.BackportedConnectionFactory;
+import cn.rtast.peerlink.client.webrtc.WebRTCChannel;
+import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager;
+import dev.onvoid.webrtc.RTCDataChannel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
+import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.client.multiplayer.ServerData;
@@ -19,10 +23,12 @@ import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
+import net.minecraft.network.protocol.handshake.HandshakeProtocols;
 import net.minecraft.network.protocol.login.LoginProtocols;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -42,57 +48,80 @@ public class ConnectScreenMixin {
         if (host.startsWith("peerlink-") || host.endsWith(".peerlink")) {
             ci.cancel();
 
-            Thread peerLinkThread = new Thread("PeerLink-Server-Connector") {
-                @Override
-                public void run() {
-                    try {
-                        WebRTCClientManager.INSTANCE.awaitDataChannelReady(10);
-                        Connection customConnection = new Connection(PacketFlow.CLIENTBOUND);
-                        ConnectScreenMixin.this.connection = customConnection;
-                        WebRTCClientManager.injectToConnection(customConnection);
-                        customConnection.initiateServerboundPlayConnection(
-                                "peerlink", 0,
-                                LoginProtocols.SERVERBOUND,
-                                LoginProtocols.CLIENTBOUND,
-                                new ClientHandshakePacketListenerImpl(
-                                        customConnection,
-                                        minecraft,
-                                        server,
-                                        ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
-                                        false,
-                                        null,
-                                        _ -> {},
-                                        new LevelLoadTracker(),
-                                        null
-                                ), false
-                        );
+            Thread peerLinkThread = new Thread(() -> {
+                try {
+                    WebRTCClientManager.INSTANCE.awaitDataChannelReady(10);
+                    RTCDataChannel activeDataChannel = WebRTCClientManager.getActiveDataChannel();
+
+                    minecraft.execute(() -> {
                         try {
-                            Field field = Minecraft.class.getDeclaredField("pendingConnection");
-                            field.setAccessible(true);
-                            field.set(minecraft, customConnection);
-                        } catch (ReflectiveOperationException exception) {
-                            throw new IllegalStateException("Failed to set Minecraft pendingConnection", exception);
+                            if (minecraft.level != null || minecraft.getSingleplayerServer() != null) {
+                                minecraft.disconnectWithProgressScreen(false);
+                            }
+                            Connection customConnection = BackportedConnectionFactory.fromChannel(
+                                    new WebRTCChannel(activeDataChannel),
+                                    PacketFlow.CLIENTBOUND,
+                                    minecraft.getDebugOverlay().getBandwidthLogger()
+                            );
+
+                            ConnectScreenMixin.this.connection = customConnection;
+                            ServerData serverData = new ServerData("PeerLink", "peerlink-host", ServerData.Type.LAN);
+                            customConnection.initiateServerboundPlayConnection(
+                                    "peerlink-host",
+                                    0,
+                                    LoginProtocols.SERVERBOUND,
+                                    LoginProtocols.CLIENTBOUND,
+                                    new ClientHandshakePacketListenerImpl(
+                                            customConnection,
+                                            minecraft,
+                                            serverData,
+                                            null,
+                                            false,
+                                            null,
+                                            _ -> {},
+                                            new LevelLoadTracker(),
+                                            null
+                                    ),
+                                    false
+                            );
+
+                            customConnection.send(new ServerboundHelloPacket(
+                                    minecraft.getUser().getName(),
+                                    minecraft.getUser().getProfileId()
+                            ));
+                            Field pendingField = Minecraft.class.getDeclaredField("pendingConnection");
+                            fieldSet(pendingField, minecraft, customConnection);
+
+                        } catch (Exception innerEx) {
+                            innerEx.printStackTrace();
+                            minecraft.gui.setScreen(
+                                    new DisconnectedScreen(
+                                            ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
+                                            Component.literal("PeerLink 连接初始化失败"),
+                                            Component.literal(innerEx.getMessage() != null ? innerEx.getMessage() : innerEx.toString())
+                                    )
+                            );
                         }
+                    });
 
-                        System.out.println("[PeerLink] 发送 ServerboundHelloPacket 发起登录请求...");
-                        customConnection.send(new ServerboundHelloPacket(
-                                minecraft.getUser().getName(),
-                                minecraft.getUser().getProfileId()
-                        ));
-
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        minecraft.execute(() -> minecraft.gui.setScreen(
-                                new DisconnectedScreen(
-                                        ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
-                                        Component.literal("PeerLink 连接失败"),
-                                        Component.literal(e.getMessage() != null ? e.getMessage() : e.toString())
-                                )
-                        ));
-                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    minecraft.execute(() -> minecraft.gui.setScreen(
+                            new DisconnectedScreen(
+                                    ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
+                                    Component.literal("PeerLink 连接失败"),
+                                    Component.literal(e.getMessage() != null ? e.getMessage() : e.toString())
+                            )
+                    ));
                 }
-            };
+            }, "PeerLink-Server-Connector");
             peerLinkThread.start();
         }
+    }
+
+    @Unique
+    private static void fieldSet(Field field, Object target, Object value) throws Exception {
+        field.setAccessible(true);
+        field.set(target, value);
     }
 }

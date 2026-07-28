@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.webrtc.WebRTCJoinManager
+import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen

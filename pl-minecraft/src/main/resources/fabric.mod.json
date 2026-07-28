@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "id": "peerlink",
+  "version": "${version}",
+  "name": "PeerLink",
+  "description": "Multiplayer mod based on WebRTC",
+  "authors": [
+    "RTAkland"
+  ],
+  "contact": {
+    "sources": "https://github.com/RTAkland/PeerLink"
+  },
+  "license": "Apache-2.0",
+  "icon": "assets/template-mod/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      {
+        "value": "cn.rtast.peerlink.client.PeerLinkEntrypoint",
+        "adapter": "kotlin"
+      }
+    ]
+  },
+  "mixins": [
+    "peerlink.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~${minecraft_version}",
+    "java": ">=${java_version}",
+    "fabric-api": "*",
+    "fabric-language-kotlin": "*"
+  }
+}

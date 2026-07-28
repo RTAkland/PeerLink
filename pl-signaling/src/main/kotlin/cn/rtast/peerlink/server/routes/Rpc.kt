@@ -8,7 +8,9 @@
 package cn.rtast.peerlink.server.routes
 
 import cn.rtast.peerlink.server.service.MinecraftSignalingServiceImpl
+import cn.rtast.peerlink.server.service.ServerSignalingServiceImpl
 import cn.rtast.peerlink.service.MinecraftSignalingService
+import cn.rtast.peerlink.service.ServerSignalingService
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import kotlinx.rpc.krpc.ktor.server.Krpc
@@ -22,6 +24,7 @@ fun Application.registerRpcRouting() {
             rpcConfig { serialization { json() } }
 
             registerService<MinecraftSignalingService> { MinecraftSignalingServiceImpl() }
+            registerService<ServerSignalingService> { ServerSignalingServiceImpl() }
         }
     }
 }

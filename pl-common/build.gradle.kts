@@ -18,4 +18,5 @@ tasks.compileJava {
 dependencies {
     api(libs.kotlinx.rpc.krpc.ktor.core)
     api(libs.kotlinx.rpc.krpc.serialization.json)
+    api(libs.klogging)
 }

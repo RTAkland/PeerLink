@@ -1,0 +1,95 @@
+/*
+ * Copyright © 2026 RTAkland
+ * Author: RTAkland
+ * Date: 2026/7/28
+ */
+
+
+package cn.rtast.peerlink.client.webrtc
+
+import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
+import cn.rtast.peerlink.client.network.WebRTCNettyHandler
+import cn.rtast.peerlink.client.util.RpcManager
+import dev.onvoid.webrtc.RTCDataChannel
+import dev.onvoid.webrtc.RTCDataChannelBuffer
+import dev.onvoid.webrtc.RTCDataChannelObserver
+import dev.onvoid.webrtc.RTCDataChannelState
+import io.netty.channel.ChannelFuture
+import io.netty.channel.embedded.EmbeddedChannel
+import net.minecraft.network.Connection
+import net.minecraft.network.chat.Component
+import java.net.InetSocketAddress
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+
+object WebRTCClientManager {
+
+    @Volatile
+    private var activeWebRtcConnection: Connection? = null
+
+    @Volatile
+    private var activeDataChannel: RTCDataChannel? = null
+    private var currentNettyHandler: WebRTCNettyHandler? = null
+
+    @Volatile
+    private var dataChannelReadyFuture = CompletableFuture<Void>()
+
+    fun setupWebRtcSession(dataChannel: RTCDataChannel) {
+        this.activeDataChannel = dataChannel
+        this.dataChannelReadyFuture = CompletableFuture()
+
+        dataChannel.registerObserver(object : RTCDataChannelObserver {
+            override fun onStateChange() {
+                val state = dataChannel.state
+                if (state == RTCDataChannelState.OPEN) {
+                    dataChannelReadyFuture.complete(null)
+                } else if (state == RTCDataChannelState.CLOSED) {
+                    dataChannelReadyFuture.completeExceptionally(IllegalStateException("DataChannel 已关闭"))
+                }
+            }
+
+            override fun onMessage(buffer: RTCDataChannelBuffer) {}
+
+            override fun onBufferedAmountChange(previousAmount: Long) {}
+        })
+
+        if (dataChannel.state == RTCDataChannelState.OPEN) {
+            dataChannelReadyFuture.complete(null)
+        }
+    }
+
+    fun awaitDataChannelReady(timeoutSeconds: Long = 10) {
+        try {
+            dataChannelReadyFuture.get(timeoutSeconds, TimeUnit.SECONDS)
+        } catch (e: Exception) {
+            throw IllegalStateException("等待 WebRTC DataChannel OPEN 超时或失败: ${e.message}", e)
+        }
+    }
+
+    @JvmStatic
+    fun injectToConnection(connection: Connection): ChannelFuture {
+        val dataChannel = activeDataChannel
+            ?: throw IllegalStateException("[WebRTCClientManager] WebRTC DataChannel 无法通信")
+        val embeddedChannel = EmbeddedChannel()
+        val nettyHandler = WebRTCNettyHandler(dataChannel)
+        this.currentNettyHandler = nettyHandler
+        embeddedChannel.pipeline().addLast("webrtc_bridge", nettyHandler)
+        (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(embeddedChannel)
+        embeddedChannel.pipeline().fireChannelActive()
+        this.activeWebRtcConnection = connection
+        return embeddedChannel.newSucceededFuture()
+    }
+
+    fun reset() {
+        try {
+            activeWebRtcConnection?.disconnect(Component.literal("WebRTC Session Reset"))
+        } catch (_: Exception) {
+        } finally {
+            activeWebRtcConnection = null
+            activeDataChannel = null
+            currentNettyHandler = null
+            dataChannelReadyFuture = CompletableFuture()
+            println("[WebRTCClientManager] 已重置 WebRTC 客户端状态")
+        }
+    }
+}

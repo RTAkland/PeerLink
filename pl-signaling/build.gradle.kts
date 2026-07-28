@@ -20,4 +20,5 @@ dependencies {
     implementation(libs.kotlinx.rpc.krpc.ktor.server)
     implementation(libs.ktor.server.netty)
     implementation(libs.ktor.server.core)
+    implementation(libs.ktor.client.cio)
 }

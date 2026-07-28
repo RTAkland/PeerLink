@@ -7,20 +7,43 @@
 
 package cn.rtast.peerlink.service
 
-import cn.rtast.peerlink.data.PlayerInfo
-import cn.rtast.peerlink.data.RoomEvent
-import cn.rtast.peerlink.data.RoomState
-import cn.rtast.peerlink.data.SignalingMessage
+import cn.rtast.peerlink.data.play.PlayerInfo
+import cn.rtast.peerlink.data.play.RoomState
+import cn.rtast.peerlink.data.play.SignalEvent
+import cn.rtast.peerlink.data.play.SignalingMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.rpc.annotations.Rpc
 import kotlin.uuid.Uuid
 
 @Rpc
 interface MinecraftSignalingService {
-    suspend fun createRoom(hostPlayer: PlayerInfo): RoomState
-    suspend fun joinRoom(roomId: String, player: PlayerInfo): RoomState
-    suspend fun leaveRoom(roomId: String, playerId: Uuid)
+    /**
+     * 监听服务端事件
+     */
+    fun observeEvents(): Flow<SignalEvent>
 
-    fun subscribeRoomEvents(roomId: String, playerId: Uuid): Flow<RoomEvent>
-    suspend fun sendSignal(roomId: String, message: SignalingMessage)
+    /**
+     * 创建房间
+     */
+    suspend fun createRoom(): RoomState
+
+    /**
+     * 加入房间
+     */
+    suspend fun joinRoom(roomId: String): RoomState
+
+    /**
+     * 离开房间
+     */
+    suspend fun leaveRoom()
+
+    /**
+     * 发送信令
+     */
+    suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage)
+
+    /**
+     * 注册身份
+     */
+    suspend fun registerIdentity(player: PlayerInfo)
 }

@@ -18,9 +18,14 @@ tasks.compileJava {
     targetCompatibility = javaVersion
 }
 
+loom {
+    accessWidenerPath = file("src/main/resources/peerlink.accesswidener")
+}
+
 dependencies {
     implementation(project(":pl-common"))
     implementation(libs.kotlinx.rpc.krpc.ktor.client)
+    implementation(libs.ktor.client.cio)
     implementation(libs.webrtc.java)
     implementation(variantOf(libs.webrtc.java) { classifier("windows-x86_64") })
 
@@ -32,14 +37,8 @@ dependencies {
 
 tasks.processResources {
     inputs.property("version", version)
-    inputs.property("minecraft_version", libs.versions.minecraft)
-    inputs.property("loader_version", libs.versions.fabricLoader)
-    inputs.property("java_version", javaVersion)
     filesMatching("fabric.mod.json") {
         expand("version" to version)
-        expand("minecraft_version" to libs.versions.minecraft)
-        expand("loader_version" to libs.versions.fabricLoader)
-        expand("java_version" to javaVersion)
     }
 
     from("LICENSE") {

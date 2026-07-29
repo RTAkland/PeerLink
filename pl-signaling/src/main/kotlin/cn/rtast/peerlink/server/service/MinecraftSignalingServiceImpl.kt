@@ -24,7 +24,7 @@ import kotlin.uuid.Uuid
 
 class MinecraftSignalingServiceImpl(
     private val serverScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
-    private val heartbeatTimeoutMs: Long = 30_000L
+    private val heartbeatTimeoutMs: Long = 30_000L,
 ) : MinecraftSignalingService {
 
     private class RoomSession(
@@ -58,11 +58,12 @@ class MinecraftSignalingServiceImpl(
     }
 
     /**
-     * 接收心跳包
+     * 心跳包
      */
-    override suspend fun sendHeartbeat() {
+    override suspend fun sendHeartbeat(clientTimestamp: Long): Long {
         val player = requireBoundPlayer()
         refreshHeartbeatTimer(player.uuid)
+        return clientTimestamp
     }
 
     override fun observeEvents(): Flow<SignalEvent> {

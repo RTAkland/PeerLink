@@ -7,6 +7,7 @@
 
 package cn.rtast.peerlink.client
 
+import cn.rtast.peerlink.client.gui.SignalingStatusIndicator
 import cn.rtast.peerlink.client.util.RpcManager
 import cn.rtast.peerlink.client.util.readConfig
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
@@ -18,6 +19,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 class PeerLinkEntrypoint : ModInitializer {
     override fun onInitialize() {
         RpcManager.start(readConfig().signalingServer)
+        SignalingStatusIndicator.register()
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
             RpcManager.stop()
             WebRTCHostManager.stopHosting()

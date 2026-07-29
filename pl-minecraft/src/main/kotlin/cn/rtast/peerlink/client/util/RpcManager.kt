@@ -1,9 +1,3 @@
-/*
- * Copyright © 2026 RTAkland
- * Author: RTAkland
- * Date: 2026/7/28
- */
-
 package cn.rtast.peerlink.client.util
 
 import cn.rtast.klogging.KLogging
@@ -27,38 +21,56 @@ import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.toKotlinUuid
 
 object RpcManager {
-    private var ktorClient: HttpClient? = null
     val isRunning = AtomicBoolean(false)
+
+    @Volatile
+    var isConnected = false
+        private set
+
     var minecraftSignalingService: MinecraftSignalingService? = null
         private set
     var serverSignalingService: ServerSignalingService? = null
         private set
 
+    @Volatile
+    var latencyMs: Long = -1L
+        private set
+
     val rpcLogger = KLogging.getLogger("PeerLink | RPC").also { it.setLoggingLevel(LogLevel.DEBUG) }
-    val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+
+    private var mainJob: Job? = null
+    var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     fun start(url: String) {
         if (!isRunning.compareAndSet(false, true)) return
-        scope.launch {
+        if (!scope.isActive) {
+            scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+        }
+
+        mainJob = scope.launch {
             while (isActive && isRunning.get()) {
                 try {
                     connectAndListen(url)
+                } catch (e: CancellationException) {
+                    throw e
                 } catch (e: Exception) {
                     rpcLogger.error("RPC 连接断开或发生异常: ${e.message}")
+                } finally {
+                    isConnected = false
+                    minecraftSignalingService = null
+                    serverSignalingService = null
                 }
-                minecraftSignalingService = null
-                serverSignalingService = null
-                try {
-                    ktorClient?.close()
-                } catch (_: Exception) {
+
+                if (isActive && isRunning.get()) {
+                    rpcLogger.debug("将在 10 秒后尝试重新连接信令服务器...")
+                    delay(10000.milliseconds)
                 }
-                delay(5000.milliseconds)
             }
         }
     }
 
     private suspend fun connectAndListen(url: String) {
-        val client = HttpClient {
+        HttpClient {
             install(WebSockets)
             installKrpc {
                 serialization {
@@ -74,39 +86,44 @@ object RpcManager {
                     }
                 }
             }
-        }
-        ktorClient = client
-
-        val rpcSession = client.rpcClient(url)
-        val minecraftService = rpcSession.minecraftSignalingService()
-        val serverService = rpcSession.serverSignalingService()
-        minecraftSignalingService = minecraftService
-        serverSignalingService = serverService
-
-        val serverInfo = serverService.serverInfo()
-        rpcLogger.info("信令服务器连接成功 ${serverInfo.version}")
-        minecraftService.registerIdentity(
-            PlayerInfo(
-                minecraft.gameProfile.id.toKotlinUuid(),
-                minecraft.gameProfile.name
+        }.use { client ->
+            val rpcSession = client.rpcClient("$url/rpc")
+            val minecraftService = rpcSession.minecraftSignalingService()
+            val serverService = rpcSession.serverSignalingService()
+            val serverInfo = serverService.serverInfo()
+            rpcLogger.info("信令服务器连接成功 ${serverInfo.version}")
+            minecraftService.registerIdentity(
+                PlayerInfo(
+                    minecraft.gameProfile.id.toKotlinUuid(),
+                    minecraft.gameProfile.name
+                )
             )
-        )
-        coroutineScope {
-            val heartbeatJob = launch { startHeartbeatLoop(minecraftService) }
-            try {
-                awaitCancellation()
-            } finally {
-                heartbeatJob.cancel()
+            minecraftSignalingService = minecraftService
+            serverSignalingService = serverService
+            isConnected = true
+            coroutineScope {
+                val heartbeatJob = launch { startHeartbeatLoop(minecraftService) }
+                try {
+                    awaitCancellation()
+                } finally {
+                    heartbeatJob.cancel()
+                }
             }
         }
     }
 
     private suspend fun startHeartbeatLoop(service: MinecraftSignalingService) {
         while (currentCoroutineContext().isActive) {
-            delay(10.seconds)
+            delay(15.seconds)
             try {
-                service.sendHeartbeat()
+                val startTime = System.currentTimeMillis()
+                service.sendHeartbeat(startTime)
+                val endTime = System.currentTimeMillis()
+                latencyMs = endTime - startTime
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
+                latencyMs = -1L
                 rpcLogger.warn("心跳包发送失败: ${e.message}")
                 throw e
             }
@@ -115,10 +132,10 @@ object RpcManager {
 
     fun stop() {
         isRunning.set(false)
-        scope.cancel()
-        try {
-            ktorClient?.close()
-        } catch (_: Exception) {
-        }
+        isConnected = false
+        minecraftSignalingService = null
+        serverSignalingService = null
+        mainJob?.cancel()
+        mainJob = null
     }
 }

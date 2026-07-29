@@ -27,11 +27,13 @@ public abstract class PauseScreenMixin extends Screen {
     }
 
     @Inject(
-            method = "createPauseMenu", at = @At(
-            value = "INVOKE",
-            target = "Lnet/minecraft/client/gui/layouts/LinearLayout;addChild(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;",
-            shift = At.Shift.AFTER,
-            ordinal = 3)
+            method = "createPauseMenu",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lnet/minecraft/client/gui/layouts/LinearLayout;addChild(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;",
+                    shift = At.Shift.AFTER,
+                    ordinal = 3
+            )
     )
     private void peerlink$addPeerLinkHostScreenButton(CallbackInfo ci, @Local(name = "iconButtonRow") LinearLayout iconButtonRow) {
         if (minecraft.isLocalServer()) {

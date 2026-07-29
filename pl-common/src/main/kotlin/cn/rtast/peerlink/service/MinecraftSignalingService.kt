@@ -50,5 +50,5 @@ interface MinecraftSignalingService {
     /**
      * 心跳包
      */
-    suspend fun sendHeartbeat()
+    suspend fun sendHeartbeat(clientTimestamp: Long = System.currentTimeMillis()): Long
 }

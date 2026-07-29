@@ -1,9 +1,3 @@
-/*
- * Copyright © 2026 RTAkland
- * Author: RTAkland
- * Date: 2026/7/27
- */
-
 package cn.rtast.peerlink.server.service
 
 import cn.rtast.klogging.KLogging
@@ -11,6 +5,7 @@ import cn.rtast.peerlink.data.play.PlayerInfo
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.server.data.ServiceContext
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.BufferOverflow
@@ -23,6 +18,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
 class MinecraftSignalingServiceImpl(
+    private val context: ServiceContext,
     private val serverScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
     private val heartbeatTimeoutMs: Long = 30_000L,
 ) : MinecraftSignalingService {
@@ -34,40 +30,39 @@ class MinecraftSignalingServiceImpl(
         val players = ConcurrentHashMap<Uuid, PlayerInfo>()
     }
 
-    private var boundPlayer: PlayerInfo? = null
-
-    private val logger = KLogging.getLogger("Signaling Server | RPC")
-
     companion object {
         private val rooms = ConcurrentHashMap<String, RoomSession>()
         private val playerRoomMap = ConcurrentHashMap<Uuid, String>()
         private val playerEventFlows = ConcurrentHashMap<Uuid, MutableSharedFlow<SignalEvent>>()
         private val playerHeartbeatJobs = ConcurrentHashMap<Uuid, Job>()
+        private val logger = KLogging.getLogger("Signaling Server | RPC")
+
+        fun refreshHeartbeatTimer(playerId: Uuid, serverScope: CoroutineScope, timeoutMs: Long, onTimeout: suspend (Uuid) -> Unit) {
+            playerHeartbeatJobs[playerId]?.cancel()
+            playerHeartbeatJobs[playerId] = serverScope.launch {
+                delay(timeoutMs.milliseconds)
+                onTimeout(playerId)
+            }
+        }
+
+        fun getOrCreatePlayerFlow(playerId: Uuid): MutableSharedFlow<SignalEvent> {
+            return playerEventFlows.computeIfAbsent(playerId) {
+                MutableSharedFlow(
+                    extraBufferCapacity = 64,
+                    onBufferOverflow = BufferOverflow.DROP_OLDEST
+                )
+            }
+        }
     }
 
-    private fun requireBoundPlayer(): PlayerInfo {
-        return boundPlayer ?: throw IllegalStateException("Identity not registered, call registerIdentity first")
-    }
-
-    override suspend fun registerIdentity(player: PlayerInfo) {
-        if (this.boundPlayer != null) throw IllegalStateException("Already registered identity: ${this.boundPlayer?.username}")
-        this.boundPlayer = player
-        getOrCreatePlayerFlow(player.uuid)
-        refreshHeartbeatTimer(player.uuid)
-        logger.info("[RPC Server] Player identity registered: ${player.username} (${player.uuid})")
-    }
-
-    /**
-     * 心跳包
-     */
     override suspend fun sendHeartbeat(clientTimestamp: Long): Long {
-        val player = requireBoundPlayer()
+        val player = context.requirePlayer()
         refreshHeartbeatTimer(player.uuid)
         return clientTimestamp
     }
 
     override fun observeEvents(): Flow<SignalEvent> {
-        val player = requireBoundPlayer()
+        val player = context.requirePlayer()
         val userFlow = getOrCreatePlayerFlow(player.uuid)
         return userFlow.asSharedFlow().onCompletion {
             handlePlayerDisconnect(player.uuid)
@@ -75,7 +70,7 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun createRoom(): RoomState {
-        val hostPlayer = requireBoundPlayer()
+        val hostPlayer = context.requirePlayer()
         refreshHeartbeatTimer(hostPlayer.uuid)
         leaveRoomInternal(hostPlayer.uuid)
         val roomId = generateRoomId()
@@ -87,7 +82,7 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun joinRoom(roomId: String): RoomState? {
-        val player = requireBoundPlayer()
+        val player = context.requirePlayer()
         refreshHeartbeatTimer(player.uuid)
         val session = rooms[roomId] ?: return null
         leaveRoomInternal(player.uuid)
@@ -99,13 +94,13 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun leaveRoom() {
-        val player = requireBoundPlayer()
+        val player = context.requirePlayer()
         refreshHeartbeatTimer(player.uuid)
         leaveRoomInternal(player.uuid)
     }
 
     override suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage) {
-        val sender = requireBoundPlayer()
+        val sender = context.requirePlayer()
         refreshHeartbeatTimer(sender.uuid)
         val targetFlow = playerEventFlows[targetPlayerId]
             ?: throw IllegalStateException("Target player $targetPlayerId is offline or unsubscribed signal event")
@@ -114,21 +109,17 @@ class MinecraftSignalingServiceImpl(
     }
 
     private fun refreshHeartbeatTimer(playerId: Uuid) {
-        playerHeartbeatJobs[playerId]?.cancel()
-        playerHeartbeatJobs[playerId] = serverScope.launch {
-            delay(heartbeatTimeoutMs.milliseconds)
-            logger.info("[RPC Server] Heartbeat timeout for player: $playerId. Force disconnecting...")
-            handlePlayerDisconnect(playerId)
+        refreshHeartbeatTimer(playerId, serverScope, heartbeatTimeoutMs) { timeoutPlayerId ->
+            logger.info("[RPC Server] Heartbeat timeout for player: $timeoutPlayerId. Force disconnecting...")
+            handlePlayerDisconnect(timeoutPlayerId)
         }
     }
 
-    private fun getOrCreatePlayerFlow(playerId: Uuid): MutableSharedFlow<SignalEvent> {
-        return playerEventFlows.computeIfAbsent(playerId) {
-            MutableSharedFlow(
-                extraBufferCapacity = 64,
-                onBufferOverflow = BufferOverflow.DROP_OLDEST
-            )
-        }
+    private suspend fun handlePlayerDisconnect(playerId: Uuid) {
+        logger.info("[RPC Server] Player disconnected/cleaned up: $playerId")
+        playerHeartbeatJobs.remove(playerId)?.cancel()
+        leaveRoomInternal(playerId)
+        playerEventFlows.remove(playerId)
     }
 
     private suspend fun leaveRoomInternal(playerId: Uuid) {
@@ -144,13 +135,6 @@ class MinecraftSignalingServiceImpl(
             rooms.remove(roomId)
             logger.info("[RPC Server] Room $roomId destroyed (empty).")
         }
-    }
-
-    private suspend fun handlePlayerDisconnect(playerId: Uuid) {
-        logger.info("[RPC Server] Player disconnected/cleaned up: $playerId")
-        playerHeartbeatJobs.remove(playerId)?.cancel()
-        leaveRoomInternal(playerId)
-        playerEventFlows.remove(playerId)
     }
 
     private fun generateRoomId(): String {

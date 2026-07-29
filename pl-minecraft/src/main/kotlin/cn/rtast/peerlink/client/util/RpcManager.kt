@@ -90,9 +90,10 @@ object RpcManager {
             val rpcSession = client.rpcClient("$url/rpc")
             val minecraftService = rpcSession.minecraftSignalingService()
             val serverService = rpcSession.serverSignalingService()
+            val authService = rpcSession.authService()
             val serverInfo = serverService.serverInfo()
             rpcLogger.info("信令服务器连接成功 ${serverInfo.version}")
-            minecraftService.registerIdentity(
+            authService.registerIdentity(
                 PlayerInfo(
                     minecraft.gameProfile.id.toKotlinUuid(),
                     minecraft.gameProfile.name

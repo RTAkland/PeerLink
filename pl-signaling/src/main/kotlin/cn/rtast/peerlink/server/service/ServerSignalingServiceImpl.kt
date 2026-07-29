@@ -14,13 +14,17 @@ import cn.rtast.peerlink.data.toICEServerConfig
 import cn.rtast.peerlink.server.CLOUDFLARE_TURN_TOKEN_ID
 import cn.rtast.peerlink.server.CLOUDFLARE_TURN_TOKEN_KEY
 import cn.rtast.peerlink.server.SIGNALING_SERVER_VERSION
+import cn.rtast.peerlink.server.data.ServiceContext
 import cn.rtast.peerlink.server.httpClient
 import cn.rtast.peerlink.service.ServerSignalingService
 import cn.rtast.peerlink.util.fromJson
 import io.ktor.client.request.*
-import io.ktor.client.statement.bodyAsText
+import io.ktor.client.statement.*
+import kotlin.uuid.Uuid
 
-class ServerSignalingServiceImpl : ServerSignalingService {
+class ServerSignalingServiceImpl(
+    private val context: ServiceContext,
+) : ServerSignalingService {
     override suspend fun serverInfo(): ServerInfo = ServerInfo(SIGNALING_SERVER_VERSION)
 
     override suspend fun acquireICEServerConfig(): ICEServerConfig {

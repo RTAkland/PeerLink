@@ -7,8 +7,11 @@
 
 package cn.rtast.peerlink.server.routes
 
+import cn.rtast.peerlink.server.data.ServiceContext
+import cn.rtast.peerlink.server.service.AuthServiceImpl
 import cn.rtast.peerlink.server.service.MinecraftSignalingServiceImpl
 import cn.rtast.peerlink.server.service.ServerSignalingServiceImpl
+import cn.rtast.peerlink.service.AuthService
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
 import io.ktor.server.application.*
@@ -23,8 +26,16 @@ fun Application.registerRpcRouting() {
         rpc("/rpc") {
             rpcConfig { serialization { json() } }
 
-            registerService<MinecraftSignalingService> { MinecraftSignalingServiceImpl() }
-            registerService<ServerSignalingService> { ServerSignalingServiceImpl() }
+            val connectionContext = ServiceContext()
+
+            registerService<AuthService> {
+                AuthServiceImpl(connectionContext) { player ->
+                    MinecraftSignalingServiceImpl.getOrCreatePlayerFlow(player.uuid)
+                }
+            }
+
+            registerService<MinecraftSignalingService> { MinecraftSignalingServiceImpl(connectionContext) }
+            registerService<ServerSignalingService> { ServerSignalingServiceImpl(connectionContext) }
         }
     }
 }

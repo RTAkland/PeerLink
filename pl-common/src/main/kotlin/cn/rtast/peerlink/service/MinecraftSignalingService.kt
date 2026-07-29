@@ -7,7 +7,6 @@
 
 package cn.rtast.peerlink.service
 
-import cn.rtast.peerlink.data.play.PlayerInfo
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
@@ -41,11 +40,6 @@ interface MinecraftSignalingService {
      * 发送信令
      */
     suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage)
-
-    /**
-     * 注册身份
-     */
-    suspend fun registerIdentity(player: PlayerInfo)
 
     /**
      * 心跳包

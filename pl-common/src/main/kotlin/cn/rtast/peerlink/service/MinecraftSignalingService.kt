@@ -30,7 +30,7 @@ interface MinecraftSignalingService {
     /**
      * 加入房间
      */
-    suspend fun joinRoom(roomId: String): RoomState
+    suspend fun joinRoom(roomId: String): RoomState?
 
     /**
      * 离开房间

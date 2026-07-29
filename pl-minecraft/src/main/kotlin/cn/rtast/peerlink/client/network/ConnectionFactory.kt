@@ -23,7 +23,7 @@ import java.net.InetSocketAddress
 import java.net.SocketAddress
 
 
-object BackportedConnectionFactory {
+object ConnectionFactory {
     private val FROM_CHANNEL: Method? = findFromChannel()
     private val CHANNEL_FIELD: Field = findField("channel")
     private val ADDRESS_FIELD: Field = findField("address")

@@ -1,0 +1,15 @@
+{
+  "peerlink.entrypoint.button": "PeerLink联机",
+  "peerlink.roomid": "房间ID",
+  "peerlink.joinRoom": "加入房间",
+  "peerlink.joinGameViaWebRTC": "通过WebRTC加入游戏",
+  "peerlink.signalingServerNotConnected": "未连接到信令服务器, 无法加入世界",
+  "peerlink.joinGameFailed": "加入游戏失败",
+  "peerlink.p2p.connecting": "正在建立 P2P 连接...",
+  "peerlink.p2p.success": "P2P 连接建立成功",
+  "peerlink.p2p.failed": "P2P 连接建立失败",
+  "peerlink.p2p.joining": "正在加入游戏...",
+  "peerlink.p2p.disconnected": "P2P 连接已断开",
+  "peerlink.p2p.icefailed": "ICE 连接失败",
+  "peerlink.signaling.invalidRoomId": "无效的房间ID"
+}

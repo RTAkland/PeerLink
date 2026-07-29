@@ -1,0 +1,15 @@
+{
+  "peerlink.entrypoint.button": "PeerLink Multiplayer",
+  "peerlink.roomid": "Room ID",
+  "peerlink.joinRoom": "Join Room",
+  "peerlink.joinGameViaWebRTC": "Join Game Via WebRTC",
+  "peerlink.signalingServerNotConnected": "Signaling Server Not Connected",
+  "peerlink.joinGameFailed": "Failed to Join Game",
+  "peerlink.p2p.connecting": "Connecting via P2P...",
+  "peerlink.p2p.success": "P2P Connection Established",
+  "peerlink.p2p.failed": "Failed to Establish P2P Connection",
+  "peerlink.p2p.joining": "Joining World...",
+  "peerlink.p2p.disconnected": "P2P Connection Disconnected",
+  "peerlink.p2p.icefailed": "ICE Connection Failed",
+  "peerlink.signaling.invalidRoomId": "Invalid Room ID"
+}

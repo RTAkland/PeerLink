@@ -14,7 +14,7 @@ import cn.rtast.peerlink.client.util.serializeCandidate
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.service.MinecraftSignalingService
-import dev.onvoid.webrtc.*
+import dev.kastle.webrtc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.uuid.Uuid
@@ -28,7 +28,7 @@ class WebRTCHostSession(
     private val iceConfig: ICEServerConfig,
     private val onClientConnected: (RTCDataChannel) -> Unit,
 ) {
-    private val peerFactory: PeerConnectionFactory? = PeerConnectionFactory()
+    private val peerFactory: PeerConnectionFactory = PeerConnectionFactory()
     private var peerConnection: RTCPeerConnection? = null
 
     private val pendingCandidates = mutableListOf<RTCIceCandidate>()
@@ -46,7 +46,7 @@ class WebRTCHostSession(
             iceServers.add(turnServer)
         }
 
-        peerConnection = peerFactory!!.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
+        peerConnection = peerFactory.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
             override fun onIceCandidate(candidate: RTCIceCandidate) {
                 scope.launch {
                     val candidateJson = serializeCandidate(candidate)
@@ -117,7 +117,7 @@ class WebRTCHostSession(
     fun close() {
         try {
             peerConnection?.close()
-            peerFactory?.dispose()
+            peerFactory.dispose()
         } catch (_: Exception) {
         } finally {
             WebRTCHostManager.removeSession(clientPlayerUuid)

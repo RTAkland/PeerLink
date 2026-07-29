@@ -7,14 +7,13 @@
 
 package cn.rtast.peerlink.client.mixin;
 
-import cn.rtast.peerlink.client.network.BackportedConnectionFactory;
+import cn.rtast.peerlink.client.network.ConnectionFactory;
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel;
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager;
-import dev.onvoid.webrtc.RTCDataChannel;
+import dev.kastle.webrtc.RTCDataChannel;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ConnectScreen;
 import net.minecraft.client.gui.screens.DisconnectedScreen;
-import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl;
 import net.minecraft.client.multiplayer.LevelLoadTracker;
 import net.minecraft.client.multiplayer.ServerData;
@@ -23,7 +22,6 @@ import net.minecraft.client.multiplayer.resolver.ServerAddress;
 import net.minecraft.network.Connection;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.PacketFlow;
-import net.minecraft.network.protocol.handshake.HandshakeProtocols;
 import net.minecraft.network.protocol.login.LoginProtocols;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import org.spongepowered.asm.mixin.Mixin;
@@ -44,21 +42,18 @@ public class ConnectScreenMixin {
     @Inject(method = "connect", at = @At("HEAD"), cancellable = true)
     private void overrideConnect(Minecraft minecraft, ServerAddress hostAndPort, ServerData server, TransferState transferState, CallbackInfo ci) {
         String host = hostAndPort.getHost();
-
         if (host.startsWith("peerlink-") || host.endsWith(".peerlink")) {
             ci.cancel();
-
             Thread peerLinkThread = new Thread(() -> {
                 try {
                     WebRTCClientManager.INSTANCE.awaitDataChannelReady(10);
                     RTCDataChannel activeDataChannel = WebRTCClientManager.getActiveDataChannel();
-
                     minecraft.execute(() -> {
                         try {
                             if (minecraft.level != null || minecraft.getSingleplayerServer() != null) {
                                 minecraft.disconnectWithProgressScreen(false);
                             }
-                            Connection customConnection = BackportedConnectionFactory.fromChannel(
+                            Connection customConnection = ConnectionFactory.fromChannel(
                                     new WebRTCChannel(activeDataChannel),
                                     PacketFlow.CLIENTBOUND,
                                     minecraft.getDebugOverlay().getBandwidthLogger()
@@ -78,7 +73,8 @@ public class ConnectScreenMixin {
                                             null,
                                             false,
                                             null,
-                                            _ -> {},
+                                            _ -> {
+                                            },
                                             new LevelLoadTracker(),
                                             null
                                     ),
@@ -91,7 +87,6 @@ public class ConnectScreenMixin {
                             ));
                             Field pendingField = Minecraft.class.getDeclaredField("pendingConnection");
                             fieldSet(pendingField, minecraft, customConnection);
-
                         } catch (Exception innerEx) {
                             innerEx.printStackTrace();
                             minecraft.gui.setScreen(

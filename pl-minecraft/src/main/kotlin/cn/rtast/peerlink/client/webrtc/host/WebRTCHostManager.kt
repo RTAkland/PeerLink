@@ -10,7 +10,7 @@ package cn.rtast.peerlink.client.webrtc.host
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
-import cn.rtast.peerlink.client.network.BackportedConnectionFactory
+import cn.rtast.peerlink.client.network.ConnectionFactory
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.RoomState
@@ -18,7 +18,7 @@ import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
-import dev.onvoid.webrtc.RTCDataChannel
+import dev.kastle.webrtc.RTCDataChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
@@ -104,7 +104,7 @@ object WebRTCHostManager {
         server.execute {
             try {
                 val rtcChannel = WebRTCChannel(dataChannel)
-                val connection = BackportedConnectionFactory.fromChannel(
+                val connection = ConnectionFactory.fromChannel(
                     rtcChannel, PacketFlow.SERVERBOUND, null
                 )
                 (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(rtcChannel)
@@ -120,6 +120,7 @@ object WebRTCHostManager {
         }
     }
 
+    @JvmStatic
     fun stopHosting() {
         signalListenJob?.cancel()
         activeSessions.values.forEach { it.close() }

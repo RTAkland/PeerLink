@@ -7,10 +7,10 @@
 
 package cn.rtast.peerlink.client.webrtc.guest
 
-import dev.onvoid.webrtc.RTCDataChannel
-import dev.onvoid.webrtc.RTCDataChannelBuffer
-import dev.onvoid.webrtc.RTCDataChannelObserver
-import dev.onvoid.webrtc.RTCDataChannelState
+import dev.kastle.webrtc.RTCDataChannel
+import dev.kastle.webrtc.RTCDataChannelBuffer
+import dev.kastle.webrtc.RTCDataChannelObserver
+import dev.kastle.webrtc.RTCDataChannelState
 import net.minecraft.network.Connection
 import net.minecraft.network.chat.Component
 import java.util.concurrent.CompletableFuture

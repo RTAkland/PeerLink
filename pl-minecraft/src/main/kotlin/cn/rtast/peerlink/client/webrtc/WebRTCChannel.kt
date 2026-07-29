@@ -7,10 +7,10 @@
 
 package cn.rtast.peerlink.client.webrtc
 
-import dev.onvoid.webrtc.RTCDataChannel
-import dev.onvoid.webrtc.RTCDataChannelBuffer
-import dev.onvoid.webrtc.RTCDataChannelObserver
-import dev.onvoid.webrtc.RTCDataChannelState
+import dev.kastle.webrtc.RTCDataChannel
+import dev.kastle.webrtc.RTCDataChannelBuffer
+import dev.kastle.webrtc.RTCDataChannelObserver
+import dev.kastle.webrtc.RTCDataChannelState
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.*

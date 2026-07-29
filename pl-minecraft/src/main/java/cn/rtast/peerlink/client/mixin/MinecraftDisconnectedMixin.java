@@ -8,6 +8,7 @@
 package cn.rtast.peerlink.client.mixin;
 
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager;
+import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.TitleScreen;
@@ -23,6 +24,7 @@ public class MinecraftDisconnectedMixin {
     private void peerlink$resetWebRTConSetScreen(Screen screen, CallbackInfo ci) {
         if (screen instanceof TitleScreen && Minecraft.getInstance().level != null) {
             WebRTCClientManager.reset();
+            WebRTCHostManager.stopHosting();
         }
     }
 
@@ -30,6 +32,7 @@ public class MinecraftDisconnectedMixin {
     private void peerlink$resetWebRTConDisconnected(Screen screen, boolean keepResourcePacks, CallbackInfo ci) {
         if (screen instanceof TitleScreen || screen == null) {
             WebRTCClientManager.reset();
+            WebRTCHostManager.stopHosting();
         }
     }
 }

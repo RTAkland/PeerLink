@@ -14,6 +14,7 @@
   },
   "client": [
     "ConnectScreenMixin",
-    "MinecraftDisconnectedMixin"
+    "MinecraftDisconnectedMixin",
+    "screen.MultiplayerScreenMixin"
   ]
 }

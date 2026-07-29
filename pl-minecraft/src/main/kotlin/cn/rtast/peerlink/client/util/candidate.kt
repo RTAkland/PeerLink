@@ -10,7 +10,7 @@ package cn.rtast.peerlink.client.util
 import cn.rtast.peerlink.data.webrtc.ICECandidatePayload
 import cn.rtast.peerlink.util.encodeJson
 import cn.rtast.peerlink.util.fromJson
-import dev.onvoid.webrtc.RTCIceCandidate
+import dev.kastle.webrtc.RTCIceCandidate
 
 
 fun serializeCandidate(candidate: RTCIceCandidate): String =

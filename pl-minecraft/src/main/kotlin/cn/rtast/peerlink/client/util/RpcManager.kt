@@ -15,7 +15,6 @@ import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.*
 import kotlinx.rpc.krpc.ktor.client.installKrpc
@@ -23,13 +22,14 @@ import kotlinx.rpc.krpc.serialization.json.json
 import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
+import net.minecraft.network.chat.Component
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.toKotlinUuid
 
 object RpcManager {
-    private val isRunning = AtomicBoolean(false)
     private var ktorClient: HttpClient? = null
+    val isRunning = AtomicBoolean(false)
     var minecraftSignalingService: MinecraftSignalingService? = null
         private set
     var serverSignalingService: ServerSignalingService? = null
@@ -43,23 +43,19 @@ object RpcManager {
         scope.launch {
             while (isActive && isRunning.get()) {
                 try {
-                    rpcLogger.info("正在连接信令服务器")
                     connectAndListen(url)
-                } catch (e: Exception) {
-                    e.printStackTrace()
-                    rpcLogger.info("连接断开或异常: ${e.message}")
+                } catch (_: Exception) {
                 }
                 minecraftSignalingService = null
                 serverSignalingService = null
                 ktorClient?.close()
-                rpcLogger.info("3秒后尝试自动重连")
-                delay(3000.milliseconds)
+                delay(5000.milliseconds)
             }
         }
     }
 
     private suspend fun connectAndListen(url: String) {
-        ktorClient = HttpClient(CIO) {
+        ktorClient = HttpClient {
             install(WebSockets)
             installKrpc {
                 serialization {
@@ -80,7 +76,7 @@ object RpcManager {
         minecraftSignalingService = minecraftService
         serverSignalingService = ktorClient!!.rpcClient(url).serverSignalingService()
         val serverInfo = serverSignalingService!!.serverInfo()
-        rpcLogger.info("连接成功 服务端版本 ${serverInfo.version}")
+        rpcLogger.info("连接成功 ${serverInfo.version}")
 
         minecraftService.registerIdentity(
             PlayerInfo(

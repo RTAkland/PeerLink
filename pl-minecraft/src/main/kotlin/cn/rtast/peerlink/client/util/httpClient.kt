@@ -9,7 +9,6 @@ package cn.rtast.peerlink.client.util
 
 import cn.rtast.peerlink.data.play.SignalEvent
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import kotlinx.rpc.RpcClient
@@ -21,7 +20,7 @@ import kotlinx.serialization.modules.SerializersModule
 import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
-val httpClient = HttpClient(CIO) {
+val httpClient = HttpClient {
     installKrpc()
     install(WebSockets)
 }

@@ -67,9 +67,9 @@ class MinecraftSignalingServiceImpl : MinecraftSignalingService {
         return RoomState(roomId, hostPlayer.uuid, session.players.values.toList())
     }
 
-    override suspend fun joinRoom(roomId: String): RoomState {
+    override suspend fun joinRoom(roomId: String): RoomState? {
         val player = requireBoundPlayer()
-        val session = rooms[roomId] ?: throw IllegalArgumentException("Room not exists: $roomId")
+        val session = rooms[roomId] ?: return null
         leaveRoomInternal(player.uuid)
         val joinEvent = SignalEvent.PlayerJoined(player)
         session.players.keys.forEach { existingPlayerId -> playerEventFlows[existingPlayerId]?.emit(joinEvent) }

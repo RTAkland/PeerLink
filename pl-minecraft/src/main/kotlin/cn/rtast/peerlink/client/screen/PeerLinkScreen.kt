@@ -7,22 +7,77 @@
 
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
+import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
+import net.minecraft.client.input.KeyEvent
+import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 
+class PeerLinkScreen(private val lastScreen: Screen) : Screen(Component.translatable("peerlink.joinGameViaWebRTC")) {
+    private var selectButton: Button? = null
+    private var roomIdEdit: EditBox? = null
 
-class PeerLinkScreen : Screen(Component.literal("PeerLink")) {
-    private var inputField: EditBox? = null
+    companion object {
+        private val roomIdComponent = Component.translatable("peerlink.roomid")
+    }
+
+    override fun keyPressed(event: KeyEvent): Boolean {
+        if (this.selectButton!!.active && this.focused === this.roomIdEdit && event.isConfirmation) {
+            joinRoom()
+            return true
+        } else return super.keyPressed(event)
+    }
 
     override fun init() {
-        inputField = EditBox(this.font, this.width / 2 - 100, this.height / 2 - 20, 200, 20, Component.literal("输入"))
-        this.addRenderableWidget(inputField!!)
-        this.addRenderableWidget(Button.builder(Component.literal("连接")) {
-            val text = inputField!!.value
-            WebRTCJoinManager.joinRoom(text)
-        }.bounds(this.width / 2 - 100, this.height / 2 + 10, 200, 20).build())
+        this.roomIdEdit = EditBox(this.font, this.width / 2 - 100, 116, 200, 20, roomIdComponent)
+        this.roomIdEdit!!.setMaxLength(128)
+        this.roomIdEdit!!.value = this.minecraft.options.lastMpIp
+        this.roomIdEdit!!.setResponder { this.updateSelectButtonStatus() }
+        this.addWidget(this.roomIdEdit!!)
+        this.selectButton = this.addRenderableWidget(
+            Button.builder(Component.translatable("peerlink.joinRoom")) { joinRoom() }
+                .bounds(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20).build()
+        )
+        this.addRenderableWidget(
+            Button.builder(
+                CommonComponents.GUI_CANCEL
+            ) { minecraft.setScreenAndShow(lastScreen) }
+                .bounds(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build()
+        )
+        this.updateSelectButtonStatus()
+    }
+
+    override fun setInitialFocus() {
+        this.setInitialFocus(this.roomIdEdit!!)
+    }
+
+    override fun resize(width: Int, height: Int) {
+        val oldEdit = this.roomIdEdit!!.value
+        this.init(width, height)
+        this.roomIdEdit!!.value = oldEdit
+    }
+
+    override fun onClose() {
+        this.minecraft.gui.setScreen(this.lastScreen)
+    }
+
+    private fun updateSelectButtonStatus() {
+        this.selectButton!!.active = (this.roomIdEdit!!.value.isNotEmpty() || this.roomIdEdit!!.value.isNotBlank())
+    }
+
+    private fun joinRoom() {
+        showNotification(Component.translatable("peerlink.p2p.connecting"), null)
+        WebRTCJoinManager.joinRoom(roomIdEdit!!.value)
+    }
+
+    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
+        super.extractRenderState(graphics, mouseX, mouseY, a)
+        graphics.centeredText(this.font, this.title, this.width / 2, 20, -1)
+        graphics.text(this.font, roomIdComponent, this.width / 2 - 100 + 1, 100, -6250336)
+        this.roomIdEdit!!.extractRenderState(graphics, mouseX, mouseY, a)
     }
 }

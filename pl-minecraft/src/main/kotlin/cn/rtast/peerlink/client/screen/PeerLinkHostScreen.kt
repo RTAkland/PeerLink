@@ -126,7 +126,12 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                         RpcManager.minecraftSignalingService!!,
                         RpcManager.serverSignalingService!!,
                         onlineMode, allowCommands, gameMode
-                    ) { minecraft.setScreenAndShow(this) }
+                    ) {
+                        showNotification(
+                            Component.translatable("peerlink.roomIdResult"),
+                            Component.literal(it.getOrThrow().roomId)
+                        )
+                    }
                 } else showNotification(Component.translatable("peerlink.p2p.alreadyHosting"), null)
             } else {
                 singleplayerServer.unpublishServer()

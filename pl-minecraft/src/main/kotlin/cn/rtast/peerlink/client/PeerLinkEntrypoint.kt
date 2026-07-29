@@ -8,6 +8,7 @@
 package cn.rtast.peerlink.client
 
 import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.readConfig
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
 import net.fabricmc.api.ModInitializer
@@ -16,9 +17,8 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 
 class PeerLinkEntrypoint : ModInitializer {
     override fun onInitialize() {
-        RpcManager.start("ws://127.0.0.1:7879/rpc")
+        RpcManager.start(readConfig().signalingServer)
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
-            logger.debug("清理RPC连接")
             RpcManager.stop()
             WebRTCHostManager.stopHosting()
             WebRTCClientManager.reset()

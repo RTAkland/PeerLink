@@ -35,7 +35,6 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     override fun init() {
         this.roomIdEdit = EditBox(this.font, this.width / 2 - 100, 116, 200, 20, roomIdComponent)
         this.roomIdEdit!!.setMaxLength(128)
-        this.roomIdEdit!!.value = this.minecraft.options.lastMpIp
         this.roomIdEdit!!.setResponder { this.updateSelectButtonStatus() }
         this.addWidget(this.roomIdEdit!!)
         this.selectButton = this.addRenderableWidget(

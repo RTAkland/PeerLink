@@ -46,4 +46,9 @@ interface MinecraftSignalingService {
      * 注册身份
      */
     suspend fun registerIdentity(player: PlayerInfo)
+
+    /**
+     * 心跳包
+     */
+    suspend fun sendHeartbeat()
 }

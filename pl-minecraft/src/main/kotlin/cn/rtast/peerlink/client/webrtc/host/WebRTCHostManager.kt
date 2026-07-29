@@ -11,6 +11,7 @@ import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
 import cn.rtast.peerlink.client.network.ConnectionFactory
+import cn.rtast.peerlink.client.util.RpcManager
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.RoomState
@@ -51,7 +52,7 @@ object WebRTCHostManager {
                 val iceConfig = serverSignalingService.acquireICEServerConfig()
                 val roomState = signalingService.createRoom()
                 currentRoomId = roomState.roomId
-                println("[Host] 房间创建成功，RoomId: ${roomState.roomId}")
+                RpcManager.rpcLogger.info("房间创建成功 RoomId: ${roomState.roomId}")
                 signalListenJob = launch {
                     signalingService.observeEvents().collect { event ->
                         if (event is SignalEvent.SignalingReceived) {
@@ -113,7 +114,6 @@ object WebRTCHostManager {
                     ServerHandshakePacketListenerImpl(server, connection)
                 )
                 server.connection.connections.add(connection)
-                println("[PeerLink Host] 成功将 WebRTC 客户端 Connection 注入 IntegratedServer！")
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -132,23 +132,17 @@ object WebRTCHostManager {
         coroutineScope: CoroutineScope,
         signalingService: MinecraftSignalingService,
         serverSignalingService: ServerSignalingService,
+        onlineMode: Boolean,
+        allowCommands: Boolean,
+        gameMode: GameType,
         onResult: (Result<RoomState>) -> Unit,
     ) {
-        val server = minecraft.singleplayerServer
-        if (server == null) {
-            println("[PeerLink] 只能在单人世界内开启 WebRTC 房间")
-            return
-        }
-
+        val server = minecraft.singleplayerServer ?: return
         if (!server.isPublished) {
-            val lanPort = 37868
-            (server as MinecraftServerAccessor).`peerlink$setOnlineMode`(false)
+            (server as MinecraftServerAccessor).`peerlink$setOnlineMode`(onlineMode)
             val success =
-                server.publishServer(MinecraftServer.MultiplayerScope.LAN, GameType.DEFAULT_MODE, true, lanPort)
-            if (!success) {
-                println("[PeerLink] LAN 服务开启失败")
-                return
-            }
+                server.publishServer(MinecraftServer.MultiplayerScope.LAN, gameMode, allowCommands, (20000..40000).random())
+            if (!success) return
         }
         startHostingRoom(
             scope = coroutineScope,

@@ -15,9 +15,9 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
 
-fun peerlinkEntrypointButton(parent: Screen, x: Int, y: Int) =
+fun peerlinkEntrypointButton(targetScreen: Screen, x: Int = -1, y: Int = -1) =
     SpriteIconButton.builder(Component.translatable("peerlink.entrypoint.button"), {
-        minecraft.setScreenAndShow(PeerLinkScreen(parent))
+        minecraft.setScreenAndShow(targetScreen)
     }, true).width(20).sprite(Identifier.fromNamespaceAndPath("peerlink", "icon/peerlink_button"), 16, 16)
         .tooltip(Component.translatable("peerlink.entrypoint.button"))
-        .build().apply { this.x = x; this.y = y }
+        .build().apply { if (x != -1) this.x = x; if (y != -1) this.y = y }

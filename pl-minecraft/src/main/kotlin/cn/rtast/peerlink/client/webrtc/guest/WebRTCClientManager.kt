@@ -7,6 +7,7 @@
 
 package cn.rtast.peerlink.client.webrtc.guest
 
+import cn.rtast.peerlink.client.util.RpcManager
 import dev.kastle.webrtc.RTCDataChannel
 import dev.kastle.webrtc.RTCDataChannelBuffer
 import dev.kastle.webrtc.RTCDataChannelObserver
@@ -69,7 +70,7 @@ object WebRTCClientManager {
             activeWebRtcConnection = null
             activeDataChannel = null
             dataChannelReadyFuture = CompletableFuture()
-            println("[WebRTCClientManager] 已重置 WebRTC 客户端状态")
+            RpcManager.rpcLogger.info("[WebRTCClientManager] 已重置 WebRTC 客户端状态")
         }
     }
 }

@@ -11,5 +11,13 @@
   "peerlink.p2p.joining": "正在加入游戏...",
   "peerlink.p2p.disconnected": "P2P 连接已断开",
   "peerlink.p2p.icefailed": "ICE 连接失败",
-  "peerlink.signaling.invalidRoomId": "无效的房间ID"
+  "peerlink.signaling.invalidRoomId": "无效的房间ID",
+  "peerlink.openToWebRTC": "通过PeerLink对WebRTC开放世界",
+  "peerlink.screen.host.enable": "PeerLink主机",
+  "peerlink.screen.host.onlineMode": "正版验证",
+  "peerlink.screen.host.roomIdHeader": "房间ID",
+  "peerlink.screen.host.roomIdPlaceholder": "未创建房间",
+  "peerlink.roomIdCopied": "已复制房间ID",
+  "peerlink.p2p.creatingRoom": "正在创建房间",
+  "peerlink.p2p.alreadyHosting": "无法创建房间: 已经创建了一个房间"
 }

@@ -17,7 +17,7 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 
-class PeerLinkScreen(private val lastScreen: Screen) : Screen(Component.translatable("peerlink.joinGameViaWebRTC")) {
+class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable("peerlink.joinGameViaWebRTC")) {
     private var selectButton: Button? = null
     private var roomIdEdit: EditBox? = null
 
@@ -45,7 +45,7 @@ class PeerLinkScreen(private val lastScreen: Screen) : Screen(Component.translat
         this.addRenderableWidget(
             Button.builder(
                 CommonComponents.GUI_CANCEL
-            ) { minecraft.setScreenAndShow(lastScreen) }
+            ) { minecraft.setScreenAndShow(parent) }
                 .bounds(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build()
         )
         this.updateSelectButtonStatus()
@@ -62,7 +62,7 @@ class PeerLinkScreen(private val lastScreen: Screen) : Screen(Component.translat
     }
 
     override fun onClose() {
-        this.minecraft.gui.setScreen(this.lastScreen)
+        this.minecraft.gui.setScreen(this.parent)
     }
 
     private fun updateSelectButtonStatus() {

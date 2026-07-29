@@ -8,7 +8,7 @@
 package cn.rtast.peerlink.client.mixin.screen;
 
 import cn.rtast.peerlink.client.gui.PeerLinkButtons;
-import net.minecraft.client.gui.components.Button;
+import cn.rtast.peerlink.client.screen.PeerLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;
@@ -28,6 +28,6 @@ public abstract class MultiplayerScreenMixin extends Screen {
     private void peerlink$peerlinkEntrypointButton(CallbackInfo ci) {
         int x = this.width - 30;
         int y = 5;
-        this.addRenderableWidget(PeerLinkButtons.peerlinkEntrypointButton(this, x, y));
+        this.addRenderableWidget(PeerLinkButtons.peerlinkEntrypointButton(new PeerLinkScreen(this), x, y));
     }
 }

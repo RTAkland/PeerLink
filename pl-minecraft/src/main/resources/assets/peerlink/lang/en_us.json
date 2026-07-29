@@ -11,5 +11,13 @@
   "peerlink.p2p.joining": "Joining World...",
   "peerlink.p2p.disconnected": "P2P Connection Disconnected",
   "peerlink.p2p.icefailed": "ICE Connection Failed",
-  "peerlink.signaling.invalidRoomId": "Invalid Room ID"
+  "peerlink.signaling.invalidRoomId": "Invalid Room ID",
+  "peerlink.openToWebRTC": "Open to WebRTC via PeerLink",
+  "peerlink.screen.host.enable": "PeerLink Hosting",
+  "peerlink.screen.host.onlineMode": "Online Mode",
+  "peerlink.screen.host.roomIdHeader": "Room ID",
+  "peerlink.screen.host.roomIdPlaceholder": "Room not created",
+  "peerlink.roomIdCopied": "Room ID Copied",
+  "peerlink.p2p.creatingRoom": "Creating Room",
+  "peerlink.p2p.alreadyHosting": "Unable to Create Room: Already Created a Room"
 }

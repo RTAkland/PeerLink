@@ -15,6 +15,7 @@
   "client": [
     "ConnectScreenMixin",
     "MinecraftDisconnectedMixin",
+    "screen.PauseScreenMixin",
     "screen.MultiplayerScreenMixin"
   ]
 }

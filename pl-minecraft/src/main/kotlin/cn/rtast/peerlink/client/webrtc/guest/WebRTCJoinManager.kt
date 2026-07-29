@@ -53,7 +53,7 @@ object WebRTCJoinManager {
                         parentScreen,
                         minecraft,
                         ServerAddress("peerlink-$roomId", 0),
-                        ServerData("PeerLink", "peer-link", ServerData.Type.REALM),
+                        ServerData("PeerLink", "peer-link", ServerData.Type.LAN),
                         false, null
                     )
                 }

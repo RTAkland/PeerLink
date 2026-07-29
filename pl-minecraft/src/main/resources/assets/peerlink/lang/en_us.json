@@ -12,7 +12,7 @@
   "peerlink.p2p.disconnected": "P2P Connection Disconnected",
   "peerlink.p2p.icefailed": "ICE Connection Failed",
   "peerlink.signaling.invalidRoomId": "Invalid Room ID",
-  "peerlink.openToWebRTC": "Open to WebRTC via PeerLink",
+  "peerlink.openToWebRTC": "Open to WebRTC",
   "peerlink.screen.host.enable": "PeerLink Hosting",
   "peerlink.screen.host.onlineMode": "Online Mode",
   "peerlink.screen.host.roomIdHeader": "Room ID",

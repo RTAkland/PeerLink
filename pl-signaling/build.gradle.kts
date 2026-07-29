@@ -23,3 +23,7 @@ dependencies {
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.client.cio)
 }
+
+tasks.build {
+    dependsOn(tasks.shadowJar)
+}

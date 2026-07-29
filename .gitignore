@@ -3,3 +3,4 @@
 .gradle/
 /.idea/
 /pl-minecraft/run/
+/pl-signaling/config.json

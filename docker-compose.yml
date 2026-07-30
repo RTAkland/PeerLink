@@ -1,0 +1,12 @@
+services:
+  signaling:
+    container_name: Signaling
+    image: ghcr.io/rtakland/peerlink:latest
+    ports:
+      - "7879:7879"
+    environment:
+      - TURN_SERVERS=YOUR_TUEN_SERVER_ADDRESS
+      - TURN_USERNAME=YOUR_TUEN_SERVER_USERNAME
+      - TURN_PASSWORD=YOUR_TUEN_SERVER_PASSWORD
+      - DEBUG=1
+    restart: always

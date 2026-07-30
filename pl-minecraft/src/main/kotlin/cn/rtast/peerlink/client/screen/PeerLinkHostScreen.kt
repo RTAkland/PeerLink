@@ -36,7 +36,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
     companion object {
         private val PEERLINK_ENABLE_LABEL = Component.translatable("peerlink.screen.host.enable")
-        private val ONLINE_MODE_LABEL = Component.translatable("peerlink.screen.host.onlineMode")
+//        private val ONLINE_MODE_LABEL = Component.translatable("peerlink.screen.host.onlineMode")
         private val GAME_MODE_LABEL = Component.translatable("selectWorld.gameMode")
         private val ALLOW_COMMANDS_LABEL = Component.translatable("selectWorld.allowCommands")
         private val ROOM_ID_HEADER =
@@ -64,14 +64,14 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 this.updateApplyChangesActiveState()
             }
         )
-        content.addChild(
-            CycleButton.onOffBuilder(this.onlineMode).create(
-                ONLINE_MODE_LABEL
-            ) { _, value ->
-                this.onlineMode = value
-                this.updateApplyChangesActiveState()
-            }
-        )
+//        content.addChild(
+//            CycleButton.onOffBuilder(this.onlineMode).create(
+//                ONLINE_MODE_LABEL
+//            ) { _, value ->
+//                this.onlineMode = value
+//                this.updateApplyChangesActiveState()
+//            }
+//        )
         content.addChild(StringWidget(ROOM_ID_HEADER, this.font))
         val currentRoomId =
             if (WebRTCHostManager.currentRoomId != null) Component.literal(WebRTCHostManager.currentRoomId.toString()) else PLACEHOLDER_ROOM_ID
@@ -113,7 +113,8 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             allowCommandsButton.setTooltip(WorldOptionsScreen.ALLOW_COMMANDS_DISABLED_TOOLTIP)
         }
         val footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(8))
-        this.applyChangesButton = Button.builder(APPLY_CHANGES) {
+        this.applyChangesButton = Button.builder(APPLY_CHANGES) { button ->
+            button.active = false
             singleplayerServer.gameTypeForOtherPlayers = this.gameMode
             if (this.allowCommands != this.initialAllowCommands) {
                 singleplayerServer.setCommandsAllowedForOtherPlayers(this.allowCommands)
@@ -126,16 +127,37 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                         RpcManager.minecraftSignalingService!!,
                         RpcManager.serverSignalingService!!,
                         onlineMode, allowCommands, gameMode
-                    ) {
-                        showNotification(
-                            Component.translatable("peerlink.roomIdResult"),
-                            Component.literal(it.getOrThrow().roomId)
-                        )
+                    ) { result ->
+                        result.onSuccess {
+                            showNotification(
+                                Component.translatable("peerlink.roomIdResult"),
+                                Component.literal(it.roomId)
+                            )
+                            this.initialPeerLinkEnabled = this.peerLinkEnabled
+                            this.initialOnlineMode = this.onlineMode
+                            this.initialGameMode = this.gameMode
+                            this.initialAllowCommands = this.allowCommands
+                        }
+                        result.onFailure {
+                            showNotification(
+                                Component.translatable("peerlink.roomCreateFailed"),
+                                Component.literal(it.message ?: "")
+                            )
+                        }
+                        this.updateApplyChangesActiveState()
                     }
-                } else showNotification(Component.translatable("peerlink.p2p.alreadyHosting"), null)
+                } else {
+                    showNotification(Component.translatable("peerlink.p2p.alreadyHosting"), null)
+                    this.updateApplyChangesActiveState()
+                }
             } else {
                 singleplayerServer.unpublishServer()
                 WebRTCHostManager.stopHosting()
+                this.initialPeerLinkEnabled = false
+                this.initialOnlineMode = this.onlineMode
+                this.initialGameMode = this.gameMode
+                this.initialAllowCommands = this.allowCommands
+                this.updateApplyChangesActiveState()
             }
         }.build()
 

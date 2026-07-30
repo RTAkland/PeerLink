@@ -42,7 +42,7 @@ public class ConnectScreenMixin {
     @Inject(method = "connect", at = @At("HEAD"), cancellable = true)
     private void overrideConnect(Minecraft minecraft, ServerAddress hostAndPort, ServerData server, TransferState transferState, CallbackInfo ci) {
         String host = hostAndPort.getHost();
-        if (host.startsWith("peerlink-") || host.endsWith(".peerlink")) {
+        if (host.endsWith(".peerlink-vitural-host")) {
             ci.cancel();
             Thread peerLinkThread = new Thread(() -> {
                 try {

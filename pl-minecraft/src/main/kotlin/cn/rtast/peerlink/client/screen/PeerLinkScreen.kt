@@ -9,6 +9,7 @@ package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
+import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager.cancelAll
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
@@ -26,7 +27,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
-        if (this.selectButton!!.active && this.focused === this.roomIdEdit && event.isConfirmation) {
+        if (this.selectButton?.active == true && this.focused === this.roomIdEdit && event.isConfirmation) {
             joinRoom()
             return true
         } else return super.keyPressed(event)
@@ -65,12 +66,27 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     private fun updateSelectButtonStatus() {
-        this.selectButton!!.active = (this.roomIdEdit!!.value.isNotEmpty() || this.roomIdEdit!!.value.isNotBlank())
+        this.selectButton?.active = this.roomIdEdit!!.value.isNotBlank()
     }
 
     private fun joinRoom() {
+        this.selectButton?.active = false
         showNotification(Component.translatable("peerlink.p2p.connecting"), null)
-        WebRTCJoinManager.joinRoom(roomIdEdit!!.value)
+        try {
+            WebRTCJoinManager.joinRoom(roomIdEdit!!.value) { result ->
+                if (!result) {
+                    cancelAll()
+                    showNotification(
+                        Component.translatable("peerlink.p2p.failed"),
+                        Component.translatable("peerlink.signaling.invalidRoomId")
+                    )
+                    this.updateSelectButtonStatus()
+                }
+            }
+        } catch (e: Exception) {
+            this.updateSelectButtonStatus()
+            throw e
+        }
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {

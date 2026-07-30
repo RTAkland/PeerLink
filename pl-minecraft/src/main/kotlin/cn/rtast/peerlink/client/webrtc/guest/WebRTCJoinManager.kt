@@ -22,12 +22,21 @@ import net.minecraft.network.chat.Component
 object WebRTCJoinManager {
     private var currentClient: WebRTCClient? = null
     private var observeJob: Job? = null
-
-    fun joinRoom(roomId: String) {
-        if (!preCheck()) return
-        val signalingService = RpcManager.minecraftSignalingService ?: return
-        val serverSignalingService = RpcManager.serverSignalingService ?: return
+    fun joinRoom(roomId: String, onResult: (Boolean) -> Unit) {
+        if (!preCheck()) {
+            onResult(false)
+            return
+        }
+        val signalingService = RpcManager.minecraftSignalingService ?: run {
+            onResult(false)
+            return
+        }
+        val serverSignalingService = RpcManager.serverSignalingService ?: run {
+            onResult(false)
+            return
+        }
         val parentScreen = minecraft.gui.screen()!!
+
         observeJob?.cancel()
         observeJob = RpcManager.scope.launch {
             signalingService.observeEvents().collect { event ->
@@ -40,6 +49,7 @@ object WebRTCJoinManager {
                 }
             }
         }
+
         RpcManager.scope.launch {
             currentClient = WebRTCClient(
                 scope = RpcManager.scope,
@@ -52,24 +62,19 @@ object WebRTCJoinManager {
                     ConnectScreen.startConnecting(
                         parentScreen,
                         minecraft,
-                        ServerAddress("peerlink-$roomId", 0),
+                        ServerAddress("$roomId.peerlink-vitural-host", 0),
                         ServerData("PeerLink", "peer-link", ServerData.Type.LAN),
                         false, null
                     )
                 }
             }
+
             val success = currentClient?.startConnect() ?: false
-            if (!success) {
-                showNotification(
-                    Component.translatable("peerlink.p2p.failed"),
-                    Component.translatable("peerlink.signaling.invalidRoomId")
-                )
-                cancelAll()
-            }
+            minecraft.execute { onResult(success) }
         }
     }
 
-    private fun cancelAll() {
+    fun cancelAll() {
         observeJob?.cancel()
         observeJob = null
         WebRTCClientManager.reset()

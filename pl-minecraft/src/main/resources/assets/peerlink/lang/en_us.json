@@ -21,5 +21,6 @@
   "peerlink.roomIdCopied": "Room ID Copied",
   "peerlink.p2p.creatingRoom": "Creating Room",
   "peerlink.p2p.alreadyHosting": "Unable to Create Room: Already Created a Room",
-  "peerlink.roomIdResult": "Room created"
+  "peerlink.roomIdResult": "Room created",
+  "peerlink.roomCreateFailed": "Failed to Create Room"
 }

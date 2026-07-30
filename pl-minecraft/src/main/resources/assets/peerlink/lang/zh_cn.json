@@ -21,5 +21,6 @@
   "peerlink.roomIdCopied": "已复制房间ID",
   "peerlink.p2p.creatingRoom": "正在创建房间",
   "peerlink.p2p.alreadyHosting": "无法创建房间: 已经创建了一个房间",
-  "peerlink.roomIdResult": "房间创建成功"
+  "peerlink.roomIdResult": "房间创建成功",
+  "peerlink.roomCreateFailed": "房间创建失败"
 }

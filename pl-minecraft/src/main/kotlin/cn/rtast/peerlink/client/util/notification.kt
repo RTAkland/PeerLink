@@ -15,7 +15,7 @@ fun showNotification(title: Component, message: Component?) {
     minecraft.execute {
         minecraft.gui.toastManager().addToast(
             SystemToast(
-                SystemToast.SystemToastId.LOW_DISK_SPACE,
+                SystemToast.SystemToastId(3000L),
                 title, message
             )
         )

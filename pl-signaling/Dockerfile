@@ -1,16 +1,10 @@
-FROM eclipse-temurin:25-jdk-alpine AS builder
-
-WORKDIR /app
-
-COPY . .
-
-RUN chmod +x ./gradlew && ./gradlew :pl-signaling:linkReleaseExecutableLinuxX64 -x test --no-daemon
-
 FROM alpine:latest AS runner
 
+RUN apk add --no-cache libstdc++ libgcc
+
 WORKDIR /app
 
-COPY --from=builder /app/pl-signaling/build/bin/linuxX64/releaseExecutable/pl-signaling.kexe ./pl-signaling.kexe
+COPY pl-signaling.kexe ./pl-signaling.kexe
 
 RUN chmod +x ./pl-signaling.kexe
 

@@ -23,6 +23,7 @@ ktor-server-websockets = { module = "io.ktor:ktor-server-websockets", version.re
 ktor-client-cio = { module = "io.ktor:ktor-client-cio", version.ref = "ktor" }
 ktor-client-curl = { module = "io.ktor:ktor-client-curl", version.ref = "ktor" }
 ktor-client-winhttp = { module = "io.ktor:ktor-client-winhttp", version.ref = "ktor" }
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
 webrtc-java-slim = { module = "com.saga-it.webrtc:webrtc-java", version.ref = "webrtcJava" }
 minecraft = { module = "com.mojang:minecraft", version.ref = "minecraft" }
 fabric-loader = { module = "net.fabricmc:fabric-loader", version.ref = "fabricLoader" }

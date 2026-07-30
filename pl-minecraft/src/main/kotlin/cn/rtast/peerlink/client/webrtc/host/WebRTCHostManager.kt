@@ -8,10 +8,10 @@
 package cn.rtast.peerlink.client.webrtc.host
 
 import cn.rtast.peerlink.client.minecraft
-import cn.rtast.peerlink.client.mixin.ClientConnectionChannelAccessor
+import cn.rtast.peerlink.client.mixin.ClientConnectionAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
-import cn.rtast.peerlink.client.network.ConnectionFactory
-import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.network.ConnectionUtil
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.RoomState
@@ -81,14 +81,12 @@ object WebRTCHostManager {
         fromPlayerUuid: Uuid,
         message: SignalingMessage,
     ) {
-        val roomId = currentRoomId ?: return
         when (message.type) {
             SignalingMessage.SignalingType.Offer -> {
                 val session = WebRTCHostSession(
                     clientPlayerUuid = fromPlayerUuid,
                     scope = scope,
                     signalingService = signalingService,
-                    roomId = roomId,
                     iceConfig = iceConfig
                 ) { dataChannel -> injectClientDataChannelToIntegratedServer(dataChannel) }
                 activeSessions[fromPlayerUuid] = session
@@ -105,10 +103,10 @@ object WebRTCHostManager {
         server.execute {
             try {
                 val rtcChannel = WebRTCChannel(dataChannel)
-                val connection = ConnectionFactory.fromChannel(
+                val connection = ConnectionUtil.fromChannel(
                     rtcChannel, PacketFlow.SERVERBOUND, null
                 )
-                (connection as ClientConnectionChannelAccessor).`peerlink$setChannel`(rtcChannel)
+                (connection as ClientConnectionAccessor).`peerlink$setChannel`(rtcChannel)
                 connection.setupInboundProtocol(
                     HandshakeProtocols.SERVERBOUND,
                     ServerHandshakePacketListenerImpl(server, connection)

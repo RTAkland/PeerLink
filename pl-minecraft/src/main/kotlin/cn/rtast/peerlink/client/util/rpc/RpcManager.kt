@@ -1,20 +1,18 @@
-package cn.rtast.peerlink.client.util
+/*
+ * Copyright © 2026 RTAkland
+ * Author: RTAkland
+ * Date: 2026/7/28
+ */
+
+package cn.rtast.peerlink.client.util.rpc
 
 import cn.rtast.klogging.KLogging
 import cn.rtast.klogging.LogLevel
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.data.play.PlayerInfo
-import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
-import io.ktor.client.*
-import io.ktor.client.plugins.websocket.*
 import kotlinx.coroutines.*
-import kotlinx.rpc.krpc.ktor.client.installKrpc
-import kotlinx.rpc.krpc.serialization.json.json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
@@ -70,45 +68,27 @@ object RpcManager {
     }
 
     private suspend fun connectAndListen(url: String) {
-        HttpClient {
-            install(WebSockets)
-            installKrpc {
-                serialization {
-                    json {
-                        serializersModule = SerializersModule {
-                            polymorphic(SignalEvent::class) {
-                                subclass(SignalEvent.PlayerJoined::class)
-                                subclass(SignalEvent.PlayerLeft::class)
-                                subclass(SignalEvent.SignalingReceived::class)
-                                subclass(SignalEvent.RoomClosed::class)
-                            }
-                        }
-                    }
-                }
-            }
-        }.use { client ->
-            val rpcSession = client.rpcClient("$url/rpc")
-            val minecraftService = rpcSession.minecraftSignalingService()
-            val serverService = rpcSession.serverSignalingService()
-            val authService = rpcSession.authService()
-            val serverInfo = serverService.serverInfo()
-            rpcLogger.info("信令服务器连接成功 ${serverInfo.version}")
-            authService.registerIdentity(
-                PlayerInfo(
-                    minecraft.gameProfile.id.toKotlinUuid(),
-                    minecraft.gameProfile.name
-                )
+        val rpcSession = httpClient.rpcClient("$url/rpc")
+        val minecraftService = rpcSession.minecraftSignalingService()
+        val serverService = rpcSession.serverSignalingService()
+        val authService = rpcSession.authService()
+        val serverInfo = serverService.serverInfo()
+        rpcLogger.info("信令服务器连接成功 ${serverInfo.version}")
+        authService.registerIdentity(
+            PlayerInfo(
+                minecraft.gameProfile.id.toKotlinUuid(),
+                minecraft.gameProfile.name
             )
-            minecraftSignalingService = minecraftService
-            serverSignalingService = serverService
-            isConnected = true
-            coroutineScope {
-                val heartbeatJob = launch { startHeartbeatLoop(minecraftService) }
-                try {
-                    awaitCancellation()
-                } finally {
-                    heartbeatJob.cancel()
-                }
+        )
+        minecraftSignalingService = minecraftService
+        serverSignalingService = serverService
+        isConnected = true
+        coroutineScope {
+            val heartbeatJob = launch { startHeartbeatLoop(minecraftService) }
+            try {
+                awaitCancellation()
+            } finally {
+                heartbeatJob.cancel()
             }
         }
     }

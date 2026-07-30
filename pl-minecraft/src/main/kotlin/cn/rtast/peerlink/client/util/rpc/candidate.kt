@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.peerlink.client.util
+package cn.rtast.peerlink.client.util.rpc
 
 import cn.rtast.peerlink.data.webrtc.ICECandidatePayload
 import cn.rtast.peerlink.util.encodeJson

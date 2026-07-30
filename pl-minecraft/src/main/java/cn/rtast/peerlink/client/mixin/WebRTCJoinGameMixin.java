@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.mixin;
 
-import cn.rtast.peerlink.client.network.ConnectionFactory;
+import cn.rtast.peerlink.client.util.network.ConnectionUtil;
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel;
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager;
 import dev.kastle.webrtc.RTCDataChannel;
@@ -26,7 +26,6 @@ import net.minecraft.network.protocol.login.LoginProtocols;
 import net.minecraft.network.protocol.login.ServerboundHelloPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
@@ -34,7 +33,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import java.lang.reflect.Field;
 
 @Mixin(ConnectScreen.class)
-public class ConnectScreenMixin {
+public class WebRTCJoinGameMixin {
 
     @Shadow
     private volatile Connection connection;
@@ -46,7 +45,7 @@ public class ConnectScreenMixin {
             ci.cancel();
             Thread peerLinkThread = new Thread(() -> {
                 try {
-                    WebRTCClientManager.INSTANCE.awaitDataChannelReady(20);
+                    WebRTCClientManager.awaitDataChannelReady(20);
                     RTCDataChannel activeDataChannel = WebRTCClientManager.getActiveDataChannel();
                     minecraft.execute(() -> {
                         try {
@@ -54,21 +53,21 @@ public class ConnectScreenMixin {
                                 minecraft.disconnectWithProgressScreen(false);
                             }
                             assert activeDataChannel != null;
-                            Connection customConnection = ConnectionFactory.fromChannel(
+                            Connection virtualRtcConnection = ConnectionUtil.fromChannel(
                                     new WebRTCChannel(activeDataChannel),
                                     PacketFlow.CLIENTBOUND,
                                     minecraft.getDebugOverlay().getBandwidthLogger()
                             );
 
-                            ConnectScreenMixin.this.connection = customConnection;
+                            WebRTCJoinGameMixin.this.connection = virtualRtcConnection;
                             ServerData serverData = new ServerData("PeerLink", "peerlink-host", ServerData.Type.LAN);
-                            customConnection.initiateServerboundPlayConnection(
+                            virtualRtcConnection.initiateServerboundPlayConnection(
                                     "peerlink-host",
                                     0,
                                     LoginProtocols.SERVERBOUND,
                                     LoginProtocols.CLIENTBOUND,
                                     new ClientHandshakePacketListenerImpl(
-                                            customConnection,
+                                            virtualRtcConnection,
                                             minecraft,
                                             serverData,
                                             null,
@@ -78,21 +77,21 @@ public class ConnectScreenMixin {
                                             },
                                             new LevelLoadTracker(),
                                             null
-                                    ),
-                                    false
+                                    ), false
                             );
 
-                            customConnection.send(new ServerboundHelloPacket(
+                            virtualRtcConnection.send(new ServerboundHelloPacket(
                                     minecraft.getUser().getName(),
                                     minecraft.getUser().getProfileId()
                             ));
                             Field pendingField = Minecraft.class.getDeclaredField("pendingConnection");
-                            fieldSet(pendingField, minecraft, customConnection);
+                            pendingField.setAccessible(true);
+                            pendingField.set(minecraft, virtualRtcConnection);
                         } catch (Exception innerEx) {
                             innerEx.printStackTrace();
                             minecraft.gui.setScreen(
                                     new DisconnectedScreen(
-                                            ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
+                                            ((ConnectScreen) (Object) WebRTCJoinGameMixin.this).parent,
                                             Component.translatable("peerlink.p2p.initialFailed"),
                                             Component.literal(innerEx.getMessage() != null ? innerEx.getMessage() : innerEx.toString())
                                     )
@@ -104,7 +103,7 @@ public class ConnectScreenMixin {
                     e.printStackTrace();
                     minecraft.execute(() -> minecraft.gui.setScreen(
                             new DisconnectedScreen(
-                                    ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
+                                    ((ConnectScreen) (Object) WebRTCJoinGameMixin.this).parent,
                                     Component.translatable("peerlink.p2p.failed"),
                                     Component.literal(e.getMessage() != null ? e.getMessage() : e.toString())
                             )
@@ -113,11 +112,5 @@ public class ConnectScreenMixin {
             }, "PeerLink-Server-Connector");
             peerLinkThread.start();
         }
-    }
-
-    @Unique
-    private static void fieldSet(Field field, Object target, Object value) throws Exception {
-        field.setAccessible(true);
-        field.set(target, value);
     }
 }

@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
 import net.minecraft.ChatFormatting

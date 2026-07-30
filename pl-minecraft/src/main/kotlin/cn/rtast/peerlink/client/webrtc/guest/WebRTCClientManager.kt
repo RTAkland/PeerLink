@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.webrtc.guest
 
-import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import dev.kastle.webrtc.RTCDataChannel
 import dev.kastle.webrtc.RTCDataChannelBuffer
 import dev.kastle.webrtc.RTCDataChannelObserver
@@ -53,6 +53,7 @@ object WebRTCClientManager {
         }
     }
 
+    @JvmStatic
     fun awaitDataChannelReady(timeoutSeconds: Long = 10) {
         try {
             dataChannelReadyFuture.get(timeoutSeconds, TimeUnit.SECONDS)

@@ -8,15 +8,16 @@
 package cn.rtast.peerlink.signaling
 
 import cn.rtast.peerlink.signaling.routes.registerRpcRouting
+import cn.rtast.peerlink.signaling.routes.service.registerIndexRouting
 import io.ktor.server.application.*
 import io.ktor.server.cio.*
 import io.ktor.server.engine.*
 
 fun main() {
-    embeddedServer(CIO, port = 7879, module = Application::module)
-        .start(true)
+    embeddedServer(CIO, port = 7879, module = Application::module).start(true)
 }
 
 fun Application.module() {
     registerRpcRouting()
+    registerIndexRouting()
 }

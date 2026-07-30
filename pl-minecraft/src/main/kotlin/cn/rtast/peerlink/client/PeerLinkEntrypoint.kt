@@ -8,7 +8,7 @@
 package cn.rtast.peerlink.client
 
 import cn.rtast.peerlink.client.gui.SignalingStatusIndicator
-import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.readConfig
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager

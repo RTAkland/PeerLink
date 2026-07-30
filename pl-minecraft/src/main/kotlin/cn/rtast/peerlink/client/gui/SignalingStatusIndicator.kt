@@ -9,7 +9,7 @@ package cn.rtast.peerlink.client.gui
 
 import cn.rtast.peerlink.client.screen.PeerLinkHostScreen
 import cn.rtast.peerlink.client.screen.PeerLinkScreen
-import cn.rtast.peerlink.client.util.RpcManager
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor

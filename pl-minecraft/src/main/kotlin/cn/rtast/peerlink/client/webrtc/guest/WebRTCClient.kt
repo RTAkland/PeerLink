@@ -7,9 +7,9 @@
 package cn.rtast.peerlink.client.webrtc.guest
 
 import cn.rtast.peerlink.client.minecraft
-import cn.rtast.peerlink.client.util.RpcManager
-import cn.rtast.peerlink.client.util.deserializeCandidate
-import cn.rtast.peerlink.client.util.serializeCandidate
+import cn.rtast.peerlink.client.util.rpc.RpcManager
+import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
+import cn.rtast.peerlink.client.util.rpc.serializeCandidate
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.service.MinecraftSignalingService

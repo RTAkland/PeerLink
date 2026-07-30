@@ -8,9 +8,9 @@
 package cn.rtast.peerlink.client.webrtc.host
 
 import cn.rtast.peerlink.client.minecraft
-import cn.rtast.peerlink.client.util.RpcManager
-import cn.rtast.peerlink.client.util.deserializeCandidate
-import cn.rtast.peerlink.client.util.serializeCandidate
+import cn.rtast.peerlink.client.util.rpc.RpcManager
+import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
+import cn.rtast.peerlink.client.util.rpc.serializeCandidate
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.service.MinecraftSignalingService
@@ -24,7 +24,6 @@ class WebRTCHostSession(
     val clientPlayerUuid: Uuid,
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
-    private val roomId: String,
     private val iceConfig: ICEServerConfig,
     private val onClientConnected: (RTCDataChannel) -> Unit,
 ) {

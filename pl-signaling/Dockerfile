@@ -1,6 +1,6 @@
 FROM alpine:latest AS runner
 
-RUN apk add --no-cache libstdc++ libgcc
+RUN apk add --no-cache libstdc++ libgcc gcompat
 
 WORKDIR /app
 

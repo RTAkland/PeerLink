@@ -7,12 +7,11 @@
 
 package cn.rtast.peerlink.signaling
 
-import cn.rtast.peerlink.signaling.config.Config.Companion.readConfig
+import cn.rtast.peerlink.signaling.util.getenv
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 
-val httpClient = HttpClient(CIO)
+val httpClient = HttpClient {}
 
-val CLOUDFLARE_TURN_TOKEN_ID = readConfig().cloudflareTurnTokenId
-val CLOUDFLARE_TURN_TOKEN_KEY = readConfig().cloudflareTurnTokenKey
+val CLOUDFLARE_TURN_TOKEN_ID = getenv("CLOUDFLARE_TURN_TOKEN_ID")!!
+val CLOUDFLARE_TURN_TOKEN_KEY = getenv("CLOUDFLARE_TURN_TOKEN_KEY")!!
 const val SIGNALING_SERVER_VERSION = "0.1-INTERNAL-TEST"

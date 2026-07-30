@@ -17,8 +17,15 @@ kotlin {
             implementation(libs.ktor.server.cio)
             implementation(libs.ktor.server.core)
             implementation(libs.ktor.server.websockets)
-            implementation(libs.ktor.client.cio)
             implementation(libs.kotlinx.io)
+        }
+
+        linuxX64Main.dependencies {
+            implementation(libs.ktor.client.curl)
+        }
+
+        mingwX64Main.dependencies {
+            implementation(libs.ktor.client.winhttp)
         }
     }
 }

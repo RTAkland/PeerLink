@@ -21,7 +21,7 @@ data class Config(
     val signalingServer: String,
 )
 
-val defaultConfig = Config("wss://peerlink-signaling-koyeb.rtast.cn")
+val defaultConfig = Config("wss://peerlink-signaling.rtast.cn")
 val configFile: Path = FabricLoader.getInstance().configDir.resolve("peerlink.json")
 
 fun readConfig(): Config {

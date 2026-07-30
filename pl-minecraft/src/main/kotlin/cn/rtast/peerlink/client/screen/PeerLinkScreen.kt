@@ -7,6 +7,7 @@
 
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.data.JoinResult
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager.cancelAll
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -69,19 +70,54 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     private fun joinRoom() {
+        val roomId = roomIdEdit!!.value.trim()
+        if (roomId.isBlank()) return
+
         this.selectButton?.active = false
+
         try {
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
-                    this, Component.translatable("peerlink.signaling.waitingResponse"),
+                    this,
+                    Component.translatable("peerlink.signaling.waitingResponse"),
                     { cancelAll(); this.updateSelectButtonStatus() }
                 ) { screen ->
-                    WebRTCJoinManager.joinRoom(roomIdEdit!!.value) { result ->
-                        if (!result) {
-                            cancelAll()
-                            screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                            this.updateSelectButtonStatus()
-                        } else screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                    WebRTCJoinManager.joinRoom(roomId) { result ->
+                        minecraft.execute {
+                            when (result) {
+                                JoinResult.PendingJoinRequest -> {
+                                    screen.updateTitle(Component.literal("Waiting for host approval..."))
+                                }
+
+                                JoinResult.InvalidRoomId -> {
+                                    screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                                    cancelAll()
+                                    this.updateSelectButtonStatus()
+                                }
+
+                                JoinResult.RejectJoin -> {
+                                    screen.updateTitle(Component.literal("Join request was rejected by the host"))
+                                    cancelAll()
+                                    this.updateSelectButtonStatus()
+                                }
+
+                                JoinResult.Accepted -> {
+                                    screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                                }
+
+                                JoinResult.JoinRequestIntentFailed -> {
+                                    screen.updateTitle(Component.literal("Failed to send join intent to signaling server"))
+                                    cancelAll()
+                                    this.updateSelectButtonStatus()
+                                }
+
+                                JoinResult.P2PInitializationFailed -> {
+                                    screen.updateTitle(Component.translatable("peerlink.joinGameFailed"))
+                                    cancelAll()
+                                    this.updateSelectButtonStatus()
+                                }
+                            }
+                        }
                     }
                 }
             )

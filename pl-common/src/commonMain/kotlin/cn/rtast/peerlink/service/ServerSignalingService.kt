@@ -7,7 +7,6 @@
 
 package cn.rtast.peerlink.service
 
-import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.ServerInfo
 import kotlinx.rpc.annotations.Rpc
 
@@ -17,9 +16,4 @@ interface ServerSignalingService {
      * 获取信令服务器信息哦
      */
     suspend fun serverInfo(): ServerInfo
-
-    /**
-     * 获取ICE服务器配置
-     */
-    suspend fun acquireICEServerConfig(): ICEServerConfig
 }

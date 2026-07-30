@@ -118,7 +118,6 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     WebRTCHostManager.openWebRTCRoom(
                         RpcManager.scope,
                         RpcManager.minecraftSignalingService!!,
-                        RpcManager.serverSignalingService!!,
                         onlineMode, allowCommands, gameMode
                     ) { result ->
                         result.onSuccess {

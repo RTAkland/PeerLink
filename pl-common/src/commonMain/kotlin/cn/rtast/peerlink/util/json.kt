@@ -14,14 +14,18 @@ import kotlinx.serialization.modules.polymorphic
 import kotlinx.serialization.modules.subclass
 
 val json = Json {
-    serializersModule = SerializersModule {
-        polymorphic(SignalEvent::class) {
-            subclass(SignalEvent.PlayerJoined::class)
-            subclass(SignalEvent.PlayerLeft::class)
-            subclass(SignalEvent.SignalingReceived::class)
-            subclass(SignalEvent.RoomClosed::class)
-        }
-    }
+//    serializersModule = SerializersModule {
+//        polymorphic(SignalEvent::class) {
+//            subclass(SignalEvent.IntentResult::class)
+//            subclass(SignalEvent.JoinRequested::class)
+//            subclass(SignalEvent.TurnCredentialsIssued::class)
+//            subclass(SignalEvent.PlayerKicked::class)
+//            subclass(SignalEvent.PlayerLeft::class)
+//            subclass(SignalEvent.PlayerJoined::class)
+//            subclass(SignalEvent.RoomClosed::class)
+//            subclass(SignalEvent.MessageReceived::class)
+//        }
+//    }
 }
 
 inline fun <reified T> String.fromJson(): T = json.decodeFromString(this)

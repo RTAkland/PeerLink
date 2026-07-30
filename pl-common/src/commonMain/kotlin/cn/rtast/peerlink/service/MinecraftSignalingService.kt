@@ -7,6 +7,7 @@
 
 package cn.rtast.peerlink.service
 
+import cn.rtast.peerlink.data.play.PeerIntent
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
@@ -28,9 +29,9 @@ interface MinecraftSignalingService {
     suspend fun createRoom(): RoomState
 
     /**
-     * 加入房间
+     * 发送Intent
      */
-    suspend fun joinRoom(roomId: String): RoomState?
+    suspend fun sendIntent(intent: PeerIntent)
 
     /**
      * 离开房间

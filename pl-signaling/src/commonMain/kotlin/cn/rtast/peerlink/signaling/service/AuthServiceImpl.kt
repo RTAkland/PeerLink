@@ -21,6 +21,6 @@ class AuthServiceImpl(
     override suspend fun registerIdentity(player: PlayerInfo) {
         context.bindPlayer(player)
         onPlayerRegistered(player)
-        logger.info("[RPC Server] Player identity registered: ${player.username} (${player.uuid})")
+        logger.info("[RPC Server] Player identity registered: ${player.name} (${player.uuid})")
     }
 }

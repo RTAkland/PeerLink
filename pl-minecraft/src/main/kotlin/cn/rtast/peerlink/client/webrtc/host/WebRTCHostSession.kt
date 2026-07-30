@@ -11,7 +11,7 @@ import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
 import cn.rtast.peerlink.client.util.rpc.serializeCandidate
-import cn.rtast.peerlink.data.ICEServerConfig
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import dev.kastle.webrtc.*
@@ -24,7 +24,7 @@ class WebRTCHostSession(
     val clientPlayerUuid: Uuid,
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
-    private val iceConfig: ICEServerConfig,
+    private val iceConfig: TurnCredentials,
     private val onClientConnected: (RTCDataChannel) -> Unit,
 ) {
     private val peerFactory: PeerConnectionFactory = PeerConnectionFactory()

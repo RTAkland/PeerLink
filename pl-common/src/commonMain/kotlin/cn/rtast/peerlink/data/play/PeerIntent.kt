@@ -1,7 +1,7 @@
 /*
  * Copyright © 2026 RTAkland
  * Author: RTAkland
- * Date: 2026/7/27
+ * Date: 2026/7/30
  */
 
 
@@ -11,7 +11,9 @@ import kotlinx.serialization.Serializable
 import kotlin.uuid.Uuid
 
 @Serializable
-data class PlayerInfo(
-    val uuid: Uuid,
-    val name: String,
+data class PeerIntent(
+    val type: IntentType,
+    val targetRoomId: String? = null,
+    val targetPlayerId: Uuid? = null,
+    val reason: String? = null
 )

@@ -12,6 +12,7 @@ import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import kotlinx.coroutines.flow.Flow
 import kotlinx.rpc.annotations.Rpc
+import kotlin.time.Clock
 import kotlin.uuid.Uuid
 
 @Rpc
@@ -44,5 +45,5 @@ interface MinecraftSignalingService {
     /**
      * 心跳包
      */
-    suspend fun sendHeartbeat(clientTimestamp: Long = System.currentTimeMillis()): Long
+    suspend fun sendHeartbeat(clientTimestamp: Long = Clock.System.now().toEpochMilliseconds()): Long
 }

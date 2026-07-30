@@ -5,9 +5,9 @@
  */
 
 
-package cn.rtast.peerlink.server
+package cn.rtast.peerlink.signaling
 
-import cn.rtast.peerlink.server.config.Config.Companion.readConfig
+import cn.rtast.peerlink.signaling.config.Config.Companion.readConfig
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 

@@ -5,15 +5,15 @@
  */
 
 
-package cn.rtast.peerlink.server
+package cn.rtast.peerlink.signaling
 
-import cn.rtast.peerlink.server.routes.registerRpcRouting
+import cn.rtast.peerlink.signaling.routes.registerRpcRouting
 import io.ktor.server.application.*
+import io.ktor.server.cio.*
 import io.ktor.server.engine.*
-import io.ktor.server.netty.*
 
 fun main() {
-    embeddedServer(Netty, port = 7879, module = Application::module)
+    embeddedServer(CIO, port = 7879, module = Application::module)
         .start(true)
 }
 

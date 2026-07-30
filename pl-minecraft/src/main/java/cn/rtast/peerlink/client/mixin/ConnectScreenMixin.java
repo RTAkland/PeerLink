@@ -46,13 +46,14 @@ public class ConnectScreenMixin {
             ci.cancel();
             Thread peerLinkThread = new Thread(() -> {
                 try {
-                    WebRTCClientManager.INSTANCE.awaitDataChannelReady(10);
+                    WebRTCClientManager.INSTANCE.awaitDataChannelReady(20);
                     RTCDataChannel activeDataChannel = WebRTCClientManager.getActiveDataChannel();
                     minecraft.execute(() -> {
                         try {
                             if (minecraft.level != null || minecraft.getSingleplayerServer() != null) {
                                 minecraft.disconnectWithProgressScreen(false);
                             }
+                            assert activeDataChannel != null;
                             Connection customConnection = ConnectionFactory.fromChannel(
                                     new WebRTCChannel(activeDataChannel),
                                     PacketFlow.CLIENTBOUND,
@@ -92,7 +93,7 @@ public class ConnectScreenMixin {
                             minecraft.gui.setScreen(
                                     new DisconnectedScreen(
                                             ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
-                                            Component.literal("PeerLink 连接初始化失败"),
+                                            Component.translatable("peerlink.p2p.initialFailed"),
                                             Component.literal(innerEx.getMessage() != null ? innerEx.getMessage() : innerEx.toString())
                                     )
                             );
@@ -104,7 +105,7 @@ public class ConnectScreenMixin {
                     minecraft.execute(() -> minecraft.gui.setScreen(
                             new DisconnectedScreen(
                                     ((ConnectScreen) (Object) ConnectScreenMixin.this).parent,
-                                    Component.literal("PeerLink 连接失败"),
+                                    Component.translatable("peerlink.p2p.failed"),
                                     Component.literal(e.getMessage() != null ? e.getMessage() : e.toString())
                             )
                     ));

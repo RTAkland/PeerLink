@@ -20,6 +20,12 @@ Click `Multiplayer` button, there's a button in the top-right corner.
 
 PeerLink require Java 25 to run, expect signaling server(Java 8).
 
+# Signaling server
+
+`./gradlew :pl-signaling:linkReleaseExecutableLinuxX64`
+
+Output executable file → ``
+
 # Open source
 
 Licensed under Apache-2.0

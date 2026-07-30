@@ -4,16 +4,16 @@ WORKDIR /app
 
 COPY . .
 
-RUN chmod +x ./gradlew && ./gradlew :pl-signaling:build -x test --no-daemon
+RUN chmod +x ./gradlew && ./gradlew :pl-signaling:linkReleaseExecutableLinuxX64 -x test --no-daemon
 
-RUN find pl-signaling/build/libs/ -name "*-all*.jar" -exec cp {} /app/app.jar \;
-
-FROM eclipse-temurin:25-jre-alpine AS runner
+FROM alpine:latest AS runner
 
 WORKDIR /app
 
-COPY --from=builder /app/app.jar ./app.jar
+COPY --from=builder /app/pl-signaling/build/bin/linuxX64/releaseExecutable/pl-signaling.kexe ./pl-signaling.kexe
+
+RUN chmod +x ./pl-signaling.kexe
 
 EXPOSE 7879
 
-ENTRYPOINT ["sh", "-c", "java -jar app.jar"]
+ENTRYPOINT ["./pl-signaling.kexe"]

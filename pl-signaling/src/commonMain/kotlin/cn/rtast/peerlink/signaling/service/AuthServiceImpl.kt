@@ -5,16 +5,16 @@
  */
 
 
-package cn.rtast.peerlink.server.service
+package cn.rtast.peerlink.signaling.service
 
 import cn.rtast.klogging.KLogging
 import cn.rtast.peerlink.data.play.PlayerInfo
-import cn.rtast.peerlink.server.data.ServiceContext
+import cn.rtast.peerlink.signaling.data.ServiceContext
 import cn.rtast.peerlink.service.AuthService
 
 class AuthServiceImpl(
     private val context: ServiceContext,
-    private val onPlayerRegistered: (PlayerInfo) -> Unit = {},
+    private val onPlayerRegistered: suspend (PlayerInfo) -> Unit = {},
 ): AuthService {
     private val logger = KLogging.getLogger("Signaling Server | Auth")
 

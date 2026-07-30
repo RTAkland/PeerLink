@@ -5,22 +5,21 @@
  */
 
 
-package cn.rtast.peerlink.server.service
+package cn.rtast.peerlink.signaling.service
 
 import cn.rtast.peerlink.data.ICEServerConfig
 import cn.rtast.peerlink.data.OriginICEServerConfig
 import cn.rtast.peerlink.data.ServerInfo
 import cn.rtast.peerlink.data.toICEServerConfig
-import cn.rtast.peerlink.server.CLOUDFLARE_TURN_TOKEN_ID
-import cn.rtast.peerlink.server.CLOUDFLARE_TURN_TOKEN_KEY
-import cn.rtast.peerlink.server.SIGNALING_SERVER_VERSION
-import cn.rtast.peerlink.server.data.ServiceContext
-import cn.rtast.peerlink.server.httpClient
+import cn.rtast.peerlink.signaling.CLOUDFLARE_TURN_TOKEN_ID
+import cn.rtast.peerlink.signaling.CLOUDFLARE_TURN_TOKEN_KEY
+import cn.rtast.peerlink.signaling.SIGNALING_SERVER_VERSION
+import cn.rtast.peerlink.signaling.data.ServiceContext
+import cn.rtast.peerlink.signaling.httpClient
 import cn.rtast.peerlink.service.ServerSignalingService
 import cn.rtast.peerlink.util.fromJson
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
-import kotlin.uuid.Uuid
 
 class ServerSignalingServiceImpl(
     private val context: ServiceContext,

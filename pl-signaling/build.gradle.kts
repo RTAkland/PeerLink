@@ -1,34 +1,24 @@
-import org.jetbrains.kotlin.gradle.dsl.JvmTarget
-
 plugins {
-    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.kotlinx.rpc)
-    alias(libs.plugins.shadow)
-    application
 }
 
-tasks.compileKotlin {
-    compilerOptions.jvmTarget = JvmTarget.JVM_1_8
-}
+kotlin {
+    listOf(
+        mingwX64(),
+        linuxX64()
+    ).forEach { it.binaries { executable { entryPoint = "cn.rtast.peerlink.signaling.main" } } }
 
-tasks.compileJava {
-    sourceCompatibility = "1.8"
-    targetCompatibility = "1.8"
-}
-
-dependencies {
-    implementation(project(":pl-common"))
-    implementation(libs.kotlinx.rpc.krpc.ktor.server)
-    implementation(libs.ktor.server.netty)
-    implementation(libs.ktor.server.core)
-    implementation(libs.ktor.client.cio)
-}
-
-tasks.build {
-    dependsOn(tasks.shadowJar)
-}
-
-application {
-    mainClass = "cn.rtast.peerlink.server.MainKt"
+    sourceSets {
+        commonMain.dependencies {
+            implementation(project(":pl-common"))
+            implementation(libs.kotlinx.rpc.krpc.ktor.server)
+            implementation(libs.ktor.server.cio)
+            implementation(libs.ktor.server.core)
+            implementation(libs.ktor.server.websockets)
+            implementation(libs.ktor.client.cio)
+            implementation(libs.kotlinx.io)
+        }
+    }
 }

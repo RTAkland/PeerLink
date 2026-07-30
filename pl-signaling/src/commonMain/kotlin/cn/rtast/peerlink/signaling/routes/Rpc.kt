@@ -5,12 +5,12 @@
  */
 
 
-package cn.rtast.peerlink.server.routes
+package cn.rtast.peerlink.signaling.routes
 
-import cn.rtast.peerlink.server.data.ServiceContext
-import cn.rtast.peerlink.server.service.AuthServiceImpl
-import cn.rtast.peerlink.server.service.MinecraftSignalingServiceImpl
-import cn.rtast.peerlink.server.service.ServerSignalingServiceImpl
+import cn.rtast.peerlink.signaling.data.ServiceContext
+import cn.rtast.peerlink.signaling.service.AuthServiceImpl
+import cn.rtast.peerlink.signaling.service.MinecraftSignalingServiceImpl
+import cn.rtast.peerlink.signaling.service.ServerSignalingServiceImpl
 import cn.rtast.peerlink.service.AuthService
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService

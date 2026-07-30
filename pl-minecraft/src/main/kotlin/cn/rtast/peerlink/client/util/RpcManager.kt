@@ -36,7 +36,7 @@ object RpcManager {
     var latencyMs: Long = -1L
         private set
 
-    val rpcLogger = KLogging.getLogger("PeerLink | RPC").also { it.setLoggingLevel(LogLevel.DEBUG) }
+    val rpcLogger = KLogging.getLogger("PeerLink | RPC").also { it.setLoggingLevel(LogLevel.INFO) }
 
     private var mainJob: Job? = null
     var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())

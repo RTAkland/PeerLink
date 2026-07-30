@@ -5,7 +5,7 @@
  */
 
 
-package cn.rtast.peerlink.server.data
+package cn.rtast.peerlink.signaling.data
 
 import cn.rtast.peerlink.data.play.PlayerInfo
 import io.ktor.util.*

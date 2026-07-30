@@ -4,7 +4,7 @@
   "peerlink.joinRoom": "Join Room",
   "peerlink.joinGameViaWebRTC": "Join Game Via WebRTC",
   "peerlink.signalingServerNotConnected": "Signaling Server Disconnected",
-  "peerlink.signalingConnected": "Signaling Server Connected %sms",
+  "peerlink.signalingConnected": "Signaling Server Connected %s",
   "peerlink.joinGameFailed": "Failed to Join Game",
   "peerlink.p2p.connecting": "Connecting via P2P...",
   "peerlink.p2p.success": "P2P Connection Established",
@@ -23,5 +23,6 @@
   "peerlink.p2p.alreadyHosting": "Unable to Create Room: Already Created a Room",
   "peerlink.roomIdResult": "Room created",
   "peerlink.roomCreateFailed": "Failed to Create Room",
-  "peerlink.p2p.initialFailed": "P2P Initialization Failed"
+  "peerlink.p2p.initialFailed": "P2P Initialization Failed",
+  "peerlink.signaling.waitingResponse": "Waiting Response from Signaling Server"
 }

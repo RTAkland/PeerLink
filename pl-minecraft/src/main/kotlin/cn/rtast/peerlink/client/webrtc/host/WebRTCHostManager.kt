@@ -137,6 +137,12 @@ object WebRTCHostManager {
         gameMode: GameType,
         onResult: (Result<RoomState>) -> Unit,
     ) {
+        startHostingRoom(
+            scope = coroutineScope,
+            signalingService = signalingService,
+            serverSignalingService = serverSignalingService,
+            onResult = onResult
+        )
         val server = minecraft.singleplayerServer ?: return
         if (!server.isPublished) {
             (server as MinecraftServerAccessor).`peerlink$setOnlineMode`(onlineMode)
@@ -144,11 +150,5 @@ object WebRTCHostManager {
                 server.publishServer(MinecraftServer.MultiplayerScope.LAN, gameMode, allowCommands, (20000..40000).random())
             if (!success) return
         }
-        startHostingRoom(
-            scope = coroutineScope,
-            signalingService = signalingService,
-            serverSignalingService = serverSignalingService,
-            onResult = onResult
-        )
     }
 }

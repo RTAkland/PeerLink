@@ -17,11 +17,9 @@ import net.minecraft.client.gui.screens.PauseScreen
 import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
-import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
-import net.minecraft.network.chat.TextColor
 
 object SignalingStatusIndicator {
     private const val SCALE = 2
@@ -85,11 +83,21 @@ object SignalingStatusIndicator {
         }
 
         if (mouseX in x..(x + size) && mouseY in y..(y + size)) {
-            val statusText = if (RpcManager.isConnected)
-                Component.translatable("peerlink.signalingConnected", RpcManager.latencyMs.toString())
-                    .setStyle(Style.EMPTY.withColor(TextColor.GREEN))
-            else Component.translatable("peerlink.signalingServerNotConnected")
-                .setStyle(Style.EMPTY.withColor(TextColor.RED))
+            val statusText = if (RpcManager.isConnected) {
+                val latency = RpcManager.latencyMs
+                val latencyColor = when {
+                    latency !in 0..2000 -> 0x555555
+                    latency <= 100 -> 0x52C41A
+                    latency <= 250 -> 0x1890FF
+                    latency <= 800 -> 0xFA8C16
+                    else -> 0xF5222D
+                }
+                val latencyComponent = Component.literal("${latency}ms")
+                    .setStyle(Style.EMPTY.withColor(latencyColor))
+                Component.translatable("peerlink.signalingConnected", latencyComponent)
+                    .setStyle(Style.EMPTY.withColor(0xAAAAAA))
+            } else Component.translatable("peerlink.signalingServerNotConnected")
+                .setStyle(Style.EMPTY.withColor(0xFF5555))
             val tooltip = ClientTooltipComponent.create(statusText.visualOrderText)
             guiGraphics.tooltip(
                 /* font = */ client.font,

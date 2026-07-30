@@ -4,7 +4,7 @@
   "peerlink.joinRoom": "加入房间",
   "peerlink.joinGameViaWebRTC": "通过WebRTC加入游戏",
   "peerlink.signalingServerNotConnected": "信令服务器已断开连接",
-  "peerlink.signalingConnected": "已连接到信令服务器 %sms",
+  "peerlink.signalingConnected": "已连接到信令服务器 %s",
   "peerlink.joinGameFailed": "加入游戏失败",
   "peerlink.p2p.connecting": "正在建立 P2P 连接...",
   "peerlink.p2p.success": "P2P 连接建立成功",
@@ -23,5 +23,6 @@
   "peerlink.p2p.alreadyHosting": "无法创建房间: 已经创建了一个房间",
   "peerlink.roomIdResult": "房间创建成功",
   "peerlink.roomCreateFailed": "房间创建失败",
-  "peerlink.p2p.initialFailed": "P2P 初始化失败"
+  "peerlink.p2p.initialFailed": "P2P 初始化失败",
+  "peerlink.signaling.waitingResponse": "等待信令服务器响应中"
 }

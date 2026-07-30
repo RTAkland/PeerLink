@@ -34,9 +34,18 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     private var initialAllowCommands = false
     private var applyChangesButton: Button? = null
 
+    val currentRoomId =
+        if (WebRTCHostManager.currentRoomId != null) Component.literal(WebRTCHostManager.currentRoomId.toString()) else PLACEHOLDER_ROOM_ID
+
+    val roomIdButton = Button.builder(currentRoomId) {
+        if (WebRTCHostManager.currentRoomId != null) {
+            minecraft.keyboardHandler.clipboard = WebRTCHostManager.currentRoomId.toString()
+            showNotification(Component.translatable("peerlink.roomIdCopied"), null)
+        }
+    }.width(210).build()
+
     companion object {
         private val PEERLINK_ENABLE_LABEL = Component.translatable("peerlink.screen.host.enable")
-//        private val ONLINE_MODE_LABEL = Component.translatable("peerlink.screen.host.onlineMode")
         private val GAME_MODE_LABEL = Component.translatable("selectWorld.gameMode")
         private val ALLOW_COMMANDS_LABEL = Component.translatable("selectWorld.allowCommands")
         private val ROOM_ID_HEADER =
@@ -64,23 +73,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 this.updateApplyChangesActiveState()
             }
         )
-//        content.addChild(
-//            CycleButton.onOffBuilder(this.onlineMode).create(
-//                ONLINE_MODE_LABEL
-//            ) { _, value ->
-//                this.onlineMode = value
-//                this.updateApplyChangesActiveState()
-//            }
-//        )
         content.addChild(StringWidget(ROOM_ID_HEADER, this.font))
-        val currentRoomId =
-            if (WebRTCHostManager.currentRoomId != null) Component.literal(WebRTCHostManager.currentRoomId.toString()) else PLACEHOLDER_ROOM_ID
-        val roomIdButton = Button.builder(currentRoomId) {
-            if (WebRTCHostManager.currentRoomId != null) {
-                minecraft.keyboardHandler.clipboard = WebRTCHostManager.currentRoomId.toString()
-                showNotification(Component.translatable("peerlink.roomIdCopied"), null)
-            }
-        }.width(210).build()
         roomIdButton.active = WebRTCHostManager.currentRoomId != null
         content.addChild(roomIdButton)
         content.addChild(StringWidget(OTHER_PLAYERS_HEADER, this.font))
@@ -129,14 +122,11 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                         onlineMode, allowCommands, gameMode
                     ) { result ->
                         result.onSuccess {
-                            showNotification(
-                                Component.translatable("peerlink.roomIdResult"),
-                                Component.literal(it.roomId)
-                            )
                             this.initialPeerLinkEnabled = this.peerLinkEnabled
                             this.initialOnlineMode = this.onlineMode
                             this.initialGameMode = this.gameMode
                             this.initialAllowCommands = this.allowCommands
+                            updateRoomId(Component.literal(it.roomId), true)
                         }
                         result.onFailure {
                             showNotification(
@@ -158,6 +148,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 this.initialGameMode = this.gameMode
                 this.initialAllowCommands = this.allowCommands
                 this.updateApplyChangesActiveState()
+                updateRoomId(currentRoomId, false)
             }
         }.build()
 
@@ -184,6 +175,11 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     override fun onClose() {
-        this.minecraft.setScreenAndShow(this.parent)
+        this.minecraft.gui.setScreen(this.parent)
+    }
+
+    fun updateRoomId(roomIdComponent: Component, enabled: Boolean) {
+        roomIdButton.message = roomIdComponent
+        roomIdButton.active = enabled
     }
 }

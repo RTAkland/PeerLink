@@ -7,7 +7,6 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager.cancelAll
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -71,18 +70,21 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
 
     private fun joinRoom() {
         this.selectButton?.active = false
-        showNotification(Component.translatable("peerlink.p2p.connecting"), null)
         try {
-            WebRTCJoinManager.joinRoom(roomIdEdit!!.value) { result ->
-                if (!result) {
-                    cancelAll()
-                    showNotification(
-                        Component.translatable("peerlink.p2p.failed"),
-                        Component.translatable("peerlink.signaling.invalidRoomId")
-                    )
-                    this.updateSelectButtonStatus()
+            minecraft.gui.setScreen(
+                PeerLinkConnectingScreen(
+                    this, Component.translatable("peerlink.signaling.waitingResponse"),
+                    { cancelAll(); this.updateSelectButtonStatus() }
+                ) { screen ->
+                    WebRTCJoinManager.joinRoom(roomIdEdit!!.value) { result ->
+                        if (!result) {
+                            cancelAll()
+                            screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                            this.updateSelectButtonStatus()
+                        } else screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                    }
                 }
-            }
+            )
         } catch (e: Exception) {
             this.updateSelectButtonStatus()
             throw e

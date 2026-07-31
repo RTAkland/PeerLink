@@ -1,3 +1,5 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     alias(libs.plugins.kotlin.serialization)
@@ -9,6 +11,7 @@ kotlin {
         mingwX64(),
         linuxX64()
     ).forEach { it.binaries { executable { entryPoint = "cn.rtast.peerlink.signaling.main" } } }
+    jvm { compilerOptions.jvmTarget = JvmTarget.JVM_17 }
 
     sourceSets {
         commonMain.dependencies {
@@ -28,6 +31,10 @@ kotlin {
 
         mingwX64Main.dependencies {
             implementation(libs.ktor.client.winhttp)
+        }
+
+        jvmMain.dependencies {
+            implementation(libs.ktor.client.okhttp)
         }
     }
 }

@@ -7,20 +7,21 @@
 
 package cn.rtast.peerlink.signaling.routes
 
-import cn.rtast.peerlink.signaling.data.ServiceContext
-import cn.rtast.peerlink.signaling.service.AuthServiceImpl
-import cn.rtast.peerlink.signaling.service.MinecraftSignalingServiceImpl
-import cn.rtast.peerlink.signaling.service.ServerSignalingServiceImpl
 import cn.rtast.peerlink.service.AuthService
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
+import cn.rtast.peerlink.signaling.data.ServiceContext
+import cn.rtast.peerlink.signaling.kv.CloudflareKvRepository
+import cn.rtast.peerlink.signaling.service.AuthServiceImpl
+import cn.rtast.peerlink.signaling.service.MinecraftSignalingServiceImpl
+import cn.rtast.peerlink.signaling.service.ServerSignalingServiceImpl
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import kotlinx.rpc.krpc.ktor.server.Krpc
 import kotlinx.rpc.krpc.ktor.server.rpc
 import kotlinx.rpc.krpc.serialization.json.json
 
-fun Application.registerRpcRouting() {
+fun Application.registerRpcRouting(cloudflareKvRepository: CloudflareKvRepository) {
     routing {
         install(Krpc)
         rpc("/rpc") {
@@ -34,7 +35,12 @@ fun Application.registerRpcRouting() {
                 }
             }
 
-            registerService<MinecraftSignalingService> { MinecraftSignalingServiceImpl(connectionContext) }
+            registerService<MinecraftSignalingService> {
+                MinecraftSignalingServiceImpl(
+                    connectionContext,
+                    cloudflareKvRepository
+                )
+            }
             registerService<ServerSignalingService> { ServerSignalingServiceImpl(connectionContext) }
         }
     }

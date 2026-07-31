@@ -71,9 +71,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     private fun joinRoom() {
         val roomId = roomIdEdit!!.value.trim()
         if (roomId.isBlank()) return
-
         this.selectButton?.active = false
-
         try {
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
@@ -85,20 +83,9 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
                             JoinResult.PendingJoinRequest -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
                             JoinResult.RejectJoin -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
                             JoinResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
-                            JoinResult.InvalidRoomId -> {
-                                screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                                handleTerminalError()
-                            }
-
-                            JoinResult.JoinRequestIntentFailed -> {
-                                screen.updateTitle(Component.translatable("peerlink.signalSentFailed"))
-                                handleTerminalError()
-                            }
-
-                            JoinResult.P2PInitializationFailed -> {
-                                screen.updateTitle(Component.translatable("peerlink.joinGameFailed"))
-                                handleTerminalError()
-                            }
+                            JoinResult.InvalidRoomId -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                            JoinResult.JoinRequestIntentFailed -> screen.updateTitle(Component.translatable("peerlink.signalSentFailed"))
+                            JoinResult.P2PInitializationFailed -> screen.updateTitle(Component.translatable("peerlink.joinGameFailed"))
                         }
                     }
                 }

@@ -62,7 +62,7 @@ object RpcManager {
 
                 if (isActive && isRunning.get()) {
                     rpcLogger.debug("将在 10 秒后尝试重新连接信令服务器...")
-                    delay(10000.milliseconds)
+                    delay(5000.milliseconds)
                 }
             }
         }

@@ -7,7 +7,6 @@
 
 package cn.rtast.peerlink.client.screen
 
-import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.LoadingDotsWidget
 import net.minecraft.client.gui.layouts.FrameLayout
@@ -16,8 +15,6 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
-import net.minecraft.util.Util
 import kotlin.concurrent.thread
 
 class PeerLinkConnectingScreen(
@@ -26,11 +23,6 @@ class PeerLinkConnectingScreen(
     private val onCancel: (screen: PeerLinkConnectingScreen) -> Unit,
     private val onConnectTask: (screen: PeerLinkConnectingScreen) -> Unit,
 ) : Screen(initialTitle) {
-
-    companion object {
-        private val BG_TEXTURE =
-            Identifier.fromNamespaceAndPath("realms", "textures/gui/realms/repeating_page_background.png")
-    }
 
     private val layout = LinearLayout.vertical()
     private var loadingDotsWidget: LoadingDotsWidget? = null
@@ -82,16 +74,4 @@ class PeerLinkConnectingScreen(
         this.minecraft.gui.setScreen(this.lastScreen)
         onCancel(this)
     }
-
-
-    override fun extractBackground(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        super.extractBackground(graphics, mouseX, mouseY, a)
-        val animatedOffset = (Util.getMillis() / 50L % 32L).toInt()
-        graphics.blit(
-            BG_TEXTURE, 0, 0, 0, animatedOffset.toFloat().toInt(),
-            this.width.toFloat(), this.height.toFloat(), 32F, 32F
-        )
-    }
-
-    fun isAborted(): Boolean = isAborted
 }

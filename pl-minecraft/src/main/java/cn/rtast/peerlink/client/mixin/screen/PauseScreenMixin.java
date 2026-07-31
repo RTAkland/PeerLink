@@ -8,16 +8,22 @@
 package cn.rtast.peerlink.client.mixin.screen;
 
 import cn.rtast.peerlink.client.gui.PeerLinkButtons;
+import cn.rtast.peerlink.client.screen.HostManagementScreen;
 import cn.rtast.peerlink.client.screen.PeerLinkHostScreen;
+import cn.rtast.peerlink.client.screen.PendingJoinRequestsScreen;
+import cn.rtast.peerlink.client.util.rpc.RpcManager;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.PauseScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.Objects;
 
 @Mixin(PauseScreen.class)
 public abstract class PauseScreenMixin extends Screen {
@@ -37,7 +43,21 @@ public abstract class PauseScreenMixin extends Screen {
     )
     private void peerlink$addPeerLinkHostScreenButton(CallbackInfo ci, @Local(name = "iconButtonRow") LinearLayout iconButtonRow) {
         if (minecraft.isLocalServer()) {
-            iconButtonRow.addChild(PeerLinkButtons.peerlinkEntrypointButton(new PeerLinkHostScreen(this), -1, -1));
+            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new PeerLinkHostScreen(this),
+                    Component.translatable("peerlink.entrypoint.button"),
+                    null, Identifier.fromNamespaceAndPath("peerlink", "icon/webrtc_multiplayer"),
+                    -1, -1
+            ));
+            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(
+                    new PendingJoinRequestsScreen(this, Objects.requireNonNull(RpcManager.getMinecraftSignalingService())),
+                    Component.translatable("peerlink.pendingJoinRequests"), null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/pending_join_request"),
+                    -1, -1, 15, 15
+            ));
+            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new HostManagementScreen(this, RpcManager.getMinecraftSignalingService()),
+                    Component.translatable("peerlink.hostManagement"),
+                    null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/host_management"),
+                    -1, -1, 15, 14
+            ));
         }
     }
 }

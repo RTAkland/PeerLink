@@ -6,20 +6,23 @@
 
 package cn.rtast.peerlink.client.webrtc.host
 
+import cn.rtast.peerlink.client.data.PendingJoinRequest
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.mixin.ClientConnectionAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
-import cn.rtast.peerlink.client.util.network.ConnectionUtil
+import cn.rtast.peerlink.client.util.HostPlayerStorage
+import cn.rtast.peerlink.client.util.network.ConnectionInjector
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel
-import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import dev.kastle.webrtc.RTCDataChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import net.minecraft.network.protocol.PacketFlow
 import net.minecraft.network.protocol.handshake.HandshakeProtocols
@@ -27,21 +30,27 @@ import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerHandshakePacketListenerImpl
 import net.minecraft.world.level.GameType
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 
 object WebRTCHostManager {
     private val activeSessions = ConcurrentHashMap<Uuid, WebRTCHostSession>()
-
-    // 保存已准备就绪的玩家 TURN 凭证配置（key: 客户端 Player UUID）
     private val pendingTurnConfigs = ConcurrentHashMap<Uuid, TurnCredentials>()
     private var signalListenJob: Job? = null
 
+    @JvmStatic
     var currentRoomId: String? = null
         private set
+    val pendingJoinRequests = ConcurrentHashMap<Uuid, PendingJoinRequest>()
 
     fun removeSession(clientUuid: Uuid) {
         activeSessions.remove(clientUuid)?.close()
         pendingTurnConfigs.remove(clientUuid)
+        removePendingRequest(clientUuid)
+    }
+
+    fun removePendingRequest(clientUuid: Uuid) {
+        pendingJoinRequests.remove(clientUuid)?.timeoutJob?.cancel()
     }
 
     fun startHostingRoom(
@@ -61,6 +70,7 @@ object WebRTCHostManager {
                             is SignalEvent.TurnCredentialsIssued -> {
                                 val targetPlayerUuid = event.targetPlayerId
                                 pendingTurnConfigs[targetPlayerUuid] = event.credentials
+                                removePendingRequest(targetPlayerUuid)
                                 RpcManager.rpcLogger.info("[PeerLink Host] 收到玩家 $targetPlayerUuid 的 TURN 凭证，准备接收 Offer")
                             }
 
@@ -79,7 +89,11 @@ object WebRTCHostManager {
                             }
 
                             is SignalEvent.JoinRequested -> {
-                                RpcManager.rpcLogger.info("[PeerLink Host] 收到玩家 ${event.applicantName} (${event.applicantId}) 的加入申请")
+                                handleJoinRequest(
+                                    scope = this,
+                                    applicantId = event.applicantId,
+                                    applicantName = event.applicantName
+                                )
                             }
 
                             else -> {}
@@ -95,6 +109,25 @@ object WebRTCHostManager {
         }
     }
 
+    private fun handleJoinRequest(
+        scope: CoroutineScope,
+        applicantId: Uuid,
+        applicantName: String,
+    ) {
+        pendingJoinRequests[applicantId]?.timeoutJob?.cancel()
+        val timeoutJob = scope.launch {
+            delay(30_000L.milliseconds)
+            pendingJoinRequests.remove(applicantId) != null
+        }
+
+        val request = PendingJoinRequest(
+            applicantId = applicantId,
+            applicantName = applicantName,
+            timeoutJob = timeoutJob
+        )
+        pendingJoinRequests[applicantId] = request
+    }
+
     private fun handleIncomingSignal(
         scope: CoroutineScope,
         signalingService: MinecraftSignalingService,
@@ -104,7 +137,6 @@ object WebRTCHostManager {
         when (message.type) {
             SignalingMessage.SignalingType.Offer -> {
                 val iceConfig = pendingTurnConfigs[fromPlayerUuid] ?: run {
-                    RpcManager.rpcLogger.warn("[PeerLink Host] 收到未授权玩家 $fromPlayerUuid 的 Offer，已被安全拒之门外")
                     return
                 }
 
@@ -131,7 +163,7 @@ object WebRTCHostManager {
         server.execute {
             try {
                 val rtcChannel = WebRTCChannel(dataChannel)
-                val connection = ConnectionUtil.fromChannel(
+                val connection = ConnectionInjector.fromChannel(
                     rtcChannel, PacketFlow.SERVERBOUND, null
                 )
                 (connection as ClientConnectionAccessor).`peerlink$setChannel`(rtcChannel)
@@ -140,17 +172,18 @@ object WebRTCHostManager {
                     ServerHandshakePacketListenerImpl(server, connection)
                 )
                 server.connection.connections.add(connection)
-            } catch (e: Exception) {
-                RpcManager.rpcLogger.error("[PeerLink Host] 注入客户端 DataChannel 到网路循环失败: ${e.message}", e)
+            } catch (_: Exception) {
             }
         }
     }
 
     @JvmStatic
-    fun stopHosting() {
+    fun stopHosting(terminate: Boolean = false) {
         signalListenJob?.cancel()
         signalListenJob = null
-        activeSessions.values.forEach { it.close() }
+        pendingJoinRequests.values.forEach { it.timeoutJob.cancel() }
+        pendingJoinRequests.clear()
+        activeSessions.values.forEach { it.close(terminate) }
         activeSessions.clear()
         pendingTurnConfigs.clear()
         currentRoomId = null
@@ -164,6 +197,7 @@ object WebRTCHostManager {
         gameMode: GameType,
         onResult: (Result<RoomState>) -> Unit,
     ) {
+        HostPlayerStorage.init()
         startHostingRoom(
             scope = coroutineScope,
             signalingService = signalingService,

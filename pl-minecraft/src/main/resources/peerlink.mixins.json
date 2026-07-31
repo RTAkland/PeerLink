@@ -4,7 +4,8 @@
   "compatibilityLevel": "JAVA_25",
   "mixins": [
     "ClientConnectionAccessor",
-    "MinecraftServerAccessor"
+    "MinecraftServerAccessor",
+    "permission.PlayerPermissionMixin"
   ],
   "injectors": {
     "defaultRequire": 1
@@ -13,9 +14,9 @@
     "requireAnnotations": true
   },
   "client": [
-    "WebRTCJoinGameMixin",
     "MinecraftDisconnectedMixin",
-    "screen.PauseScreenMixin",
-    "screen.MultiplayerScreenMixin"
+    "WebRTCJoinGameMixin",
+    "screen.MultiplayerScreenMixin",
+    "screen.PauseScreenMixin"
   ]
 }

@@ -11,12 +11,16 @@ import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
 import cn.rtast.peerlink.client.util.rpc.serializeCandidate
-import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import dev.kastle.webrtc.*
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
@@ -32,6 +36,7 @@ class WebRTCHostSession(
 
     private val pendingCandidates = mutableListOf<RTCIceCandidate>()
     private var isRemoteSdpSet = false
+    private var dataChannel: RTCDataChannel? = null
 
     fun handleOfferAndCreateAnswer(sdpOffer: String) {
         val rtcConfig = RTCConfiguration().apply {
@@ -70,6 +75,7 @@ class WebRTCHostSession(
                         override fun onMessage(buffer: RTCDataChannelBuffer) {}
                         override fun onStateChange() {
                             if (dataChannel.state == RTCDataChannelState.OPEN) {
+                                this@WebRTCHostSession.dataChannel = dataChannel
                                 onClientConnected(dataChannel)
                             }
                         }
@@ -113,11 +119,26 @@ class WebRTCHostSession(
         }
     }
 
-    fun close() {
+    fun close(terminate: Boolean = false) {
         try {
-            peerConnection?.close()
-            peerFactory.dispose()
-        } catch (_: Exception) {
+            if (terminate) scope.cancel()
+            val conn = peerConnection
+            peerConnection = null
+            try {
+                conn?.close()
+            this@WebRTCHostSession.dataChannel?.close()
+            this@WebRTCHostSession.dataChannel?.dispose()
+            } catch (_: Throwable) {
+            }
+            scope.launch(Dispatchers.IO) {
+                try {
+                    delay(200.milliseconds)
+                    System.gc()
+                    peerFactory.dispose()
+                } catch (_: Throwable) {
+                }
+            }
+        } catch (_: Throwable) {
         } finally {
             WebRTCHostManager.removeSession(clientPlayerUuid)
         }

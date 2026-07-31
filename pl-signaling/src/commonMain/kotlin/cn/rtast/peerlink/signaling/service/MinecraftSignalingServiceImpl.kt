@@ -7,8 +7,8 @@
 package cn.rtast.peerlink.signaling.service
 
 import cn.rtast.klogging.KLogging
-import cn.rtast.peerlink.data.webrtc.OriginTurnCredentials
 import cn.rtast.peerlink.data.play.*
+import cn.rtast.peerlink.data.webrtc.OriginTurnCredentials
 import cn.rtast.peerlink.data.webrtc.toTurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.signaling.CLOUDFLARE_TURN_TOKEN_ID
@@ -36,8 +36,13 @@ class MinecraftSignalingServiceImpl(
         val hostId: Uuid,
     ) {
         val players = CoroutineConcurrentMap<Uuid, PlayerInfo>()
-        val pendingApplicants = CoroutineConcurrentMap<Uuid, PlayerInfo>()
+        val pendingRequests = CoroutineConcurrentMap<Uuid, DeferredRequest>()
     }
+
+    private data class DeferredRequest(
+        val applicant: PlayerInfo,
+        val deferred: CompletableDeferred<JoinResponse>,
+    )
 
     companion object {
         private val rooms = CoroutineConcurrentMap<String, RoomSession>()
@@ -97,47 +102,73 @@ class MinecraftSignalingServiceImpl(
         return RoomState(roomId, hostPlayer.uuid, session.players.values())
     }
 
-    override suspend fun sendIntent(intent: PeerIntent) {
-        val operator = context.requirePlayer()
-        refreshHeartbeatTimer(operator.uuid)
-        when (intent.type) {
-            IntentType.JOIN_REQUEST -> {
-                val targetRoomId =
-                    intent.targetRoomId ?: throw IllegalArgumentException("Target roomId required for JOIN_REQUEST.")
-                val session = rooms[targetRoomId] ?: run {
-                    logger.warn("[RPC Server] Player ${operator.name} tried to join non-existent room: $targetRoomId")
-                    playerEventFlows[operator.uuid]?.emit(
-                        SignalEvent.IntentResult(
-                            intentType = IntentType.JOIN_REQUEST,
-                            success = false,
-                            reason = "Room $targetRoomId does not exist."
-                        )
-                    )
-                    return
-                }
-                if (session.players.containsKey(operator.uuid) || session.pendingApplicants.containsKey(operator.uuid)) return
-                leaveRoomInternal(operator.uuid)
-                session.pendingApplicants[operator.uuid] = operator
-                playerRoomMap[operator.uuid] = targetRoomId
-                val hostFlow = playerEventFlows[session.hostId]
-                if (hostFlow != null) {
-                    hostFlow.emit(SignalEvent.JoinRequested(operator.uuid, operator.name))
-                    logger.info("[RPC Server] Join request from ${operator.name} forwarded to host ${session.hostId}")
-                } else logger.error("[RPC Server] Host ${session.hostId} is offline or has no event flow!")
-            }
-
-            else -> {
-                val roomId = playerRoomMap[operator.uuid] ?: throw IllegalStateException("Operator is not in any room.")
-                val session = rooms[roomId] ?: throw IllegalStateException("Room $roomId not found.")
-                when (intent.type) {
-                    IntentType.ACCEPT_JOIN -> handleAcceptJoin(session, operator, intent.targetPlayerId)
-                    IntentType.REJECT_JOIN -> handleRejectJoin(session, operator, intent.targetPlayerId, intent.reason)
-                    IntentType.KICK_PLAYER -> handleKickPlayer(session, operator, intent.targetPlayerId, intent.reason)
-                    IntentType.LEAVE_ROOM -> leaveRoomInternal(operator.uuid)
-                    else -> error("Unreachable code")
-                }
-            }
+    override suspend fun joinRoom(roomId: String): JoinResponse {
+        val applicant = context.requirePlayer()
+        refreshHeartbeatTimer(applicant.uuid)
+        val session = rooms[roomId] ?: return JoinResponse.Error("Room $roomId does not exist.")
+        if (session.players.containsKey(applicant.uuid)) {
+            return JoinResponse.Error("You are already in this room.")
         }
+        leaveRoomInternal(applicant.uuid)
+        val deferred = CompletableDeferred<JoinResponse>()
+        session.pendingRequests[applicant.uuid] = DeferredRequest(applicant, deferred)
+        playerRoomMap[applicant.uuid] = roomId
+        val hostFlow = playerEventFlows[session.hostId]
+        if (hostFlow != null) {
+            hostFlow.emit(SignalEvent.JoinRequested(applicant.uuid, applicant.name))
+            logger.info("[RPC Server] Join request from ${applicant.name} sent to host ${session.hostId}")
+        } else {
+            session.pendingRequests.remove(applicant.uuid)
+            playerRoomMap.remove(applicant.uuid)
+            return JoinResponse.Error("Host is offline or unreachable.")
+        }
+        return try {
+            withTimeout(30_000L.milliseconds) { deferred.await() }
+        } catch (_: TimeoutCancellationException) {
+            session.pendingRequests.remove(applicant.uuid)
+            playerRoomMap.remove(applicant.uuid)
+            JoinResponse.Error("Join request timed out (Host did not respond).")
+        }
+    }
+
+    override suspend fun respondJoinRequest(applicantId: Uuid, accept: Boolean, reason: String?) {
+        val host = context.requirePlayer()
+        refreshHeartbeatTimer(host.uuid)
+        val roomId = playerRoomMap[host.uuid] ?: throw IllegalStateException("Host is not in any room.")
+        val session = rooms[roomId] ?: throw IllegalStateException("Room not found.")
+        require(session.hostId == host.uuid) { "Only host can respond to join requests." }
+        val pending = session.pendingRequests.remove(applicantId)
+            ?: throw IllegalStateException("No pending request for applicant $applicantId")
+        if (accept) {
+            session.players[applicantId] = pending.applicant
+            val credentials = fetchTurnCredentials()
+            pending.deferred.complete(JoinResponse.Accepted(session.hostId, credentials))
+            val turnEventForHost = SignalEvent.TurnCredentialsIssued(applicantId, credentials)
+            playerEventFlows[session.hostId]?.emit(turnEventForHost)
+            val joinEvent = SignalEvent.PlayerJoined(pending.applicant)
+            session.players.keys().forEach { existingId ->
+                if (existingId != applicantId && existingId != session.hostId) playerEventFlows[existingId]?.emit(
+                    joinEvent
+                )
+            }
+            logger.info("[RPC Server] Host accepted ${pending.applicant.name} into room $roomId.")
+        } else {
+            playerRoomMap.remove(applicantId)
+            pending.deferred.complete(JoinResponse.Rejected(reason ?: "Host rejected your request."))
+            logger.info("[RPC Server] Host rejected $applicantId. Reason: $reason")
+        }
+    }
+
+    override suspend fun kickPlayer(targetPlayerId: Uuid, reason: String?) {
+        val host = context.requirePlayer()
+        refreshHeartbeatTimer(host.uuid)
+        val roomId = playerRoomMap[host.uuid] ?: throw IllegalStateException("Operator is not in any room.")
+        val session = rooms[roomId] ?: throw IllegalStateException("Room $roomId not found.")
+        require(host.uuid == session.hostId) { "Only room host can kick players." }
+        require(targetPlayerId != session.hostId) { "Host cannot kick themselves." }
+        playerEventFlows[targetPlayerId]?.emit(SignalEvent.PlayerKicked(reason ?: "Kicked by host."))
+        leaveRoomInternal(targetPlayerId)
+        logger.info("[RPC Server] Host kicked $targetPlayerId from room $roomId.")
     }
 
     override suspend fun leaveRoom() {
@@ -151,72 +182,27 @@ class MinecraftSignalingServiceImpl(
         refreshHeartbeatTimer(sender.uuid)
         val targetFlow = playerEventFlows[targetPlayerId]
             ?: throw IllegalStateException("Target player $targetPlayerId is offline or unsubscribed.")
-        val signalEvent = SignalEvent.MessageReceived(fromPlayerId = sender.uuid, message = message)
-        targetFlow.emit(signalEvent)
+        targetFlow.emit(SignalEvent.MessageReceived(fromPlayerId = sender.uuid, message = message))
     }
 
-    private suspend fun handleAcceptJoin(session: RoomSession, operator: PlayerInfo, targetPlayerId: Uuid?) {
-        require(operator.uuid == session.hostId) { "Only room host can accept join requests." }
-        requireNotNull(targetPlayerId) { "Target player ID must not be null." }
-        val applicant = session.pendingApplicants.remove(targetPlayerId)
-            ?: throw IllegalStateException("Player $targetPlayerId is not in pending queue.")
-        session.players[targetPlayerId] = applicant
-        val credentials =
-            httpClient.post("https://rtc.live.cloudflare.com/v1/turn/keys/$CLOUDFLARE_TURN_TOKEN_ID/credentials/generate-ice-servers") {
-                headers {
-                    header("Authorization", "Bearer $CLOUDFLARE_TURN_TOKEN_KEY")
-                    header("Content-Type", "application/json")
-                }
-                setBody("{\"ttl\":3600}")
-            }.bodyAsText().fromJson<OriginTurnCredentials>().toTurnCredentials()
-        val turnEventForApplicant = SignalEvent.TurnCredentialsIssued(session.hostId, credentials)
-        val turnEventForHost = SignalEvent.TurnCredentialsIssued(targetPlayerId, credentials)
+    override suspend fun getRoomState(): RoomState {
+        val player = context.requirePlayer()
+        refreshHeartbeatTimer(player.uuid)
+        val roomId =
+            playerRoomMap[player.uuid] ?: throw IllegalStateException("Player ${player.uuid} is not in any room.")
+        val session = rooms[roomId] ?: throw IllegalStateException("Room $roomId not found.")
+        return RoomState(session.roomId, session.hostId, session.players.values())
+    }
 
-        playerEventFlows[targetPlayerId]?.emit(turnEventForApplicant)
-        playerEventFlows[session.hostId]?.emit(turnEventForHost)
-        val joinEvent = SignalEvent.PlayerJoined(applicant)
-        session.players.keys().forEach { existingId ->
-            if (existingId != targetPlayerId) playerEventFlows[existingId]?.emit(joinEvent)
+    private suspend fun fetchTurnCredentials() = httpClient.post(
+        "https://rtc.live.cloudflare.com/v1/turn/keys/$CLOUDFLARE_TURN_TOKEN_ID/credentials/generate-ice-servers"
+    ) {
+        headers {
+            header("Authorization", "Bearer $CLOUDFLARE_TURN_TOKEN_KEY")
+            header("Content-Type", "application/json")
         }
-
-        logger.info("[RPC Server] Host accepted ${applicant.name} into room ${session.roomId}. TURN issued.")
-    }
-
-    private suspend fun handleRejectJoin(
-        session: RoomSession,
-        operator: PlayerInfo,
-        targetPlayerId: Uuid?,
-        reason: String?,
-    ) {
-        require(operator.uuid == session.hostId) { "Only room host can reject join requests." }
-        requireNotNull(targetPlayerId) { "Target player ID must not be null." }
-
-        session.pendingApplicants.remove(targetPlayerId)
-        playerRoomMap.remove(targetPlayerId)
-
-        val resultEvent = SignalEvent.IntentResult(
-            intentType = IntentType.REJECT_JOIN,
-            success = false,
-            reason = reason ?: "Host rejected your request."
-        )
-        playerEventFlows[targetPlayerId]?.emit(resultEvent)
-        logger.info("[RPC Server] Host rejected $targetPlayerId. Reason: $reason")
-    }
-
-    private suspend fun handleKickPlayer(
-        session: RoomSession,
-        operator: PlayerInfo,
-        targetPlayerId: Uuid?,
-        reason: String?,
-    ) {
-        require(operator.uuid == session.hostId) { "Only room host can kick players." }
-        requireNotNull(targetPlayerId) { "Target player ID must not be null." }
-        require(targetPlayerId != session.hostId) { "Host cannot kick themselves." }
-
-        playerEventFlows[targetPlayerId]?.emit(SignalEvent.PlayerKicked(reason ?: "Kicked by host."))
-        leaveRoomInternal(targetPlayerId)
-        logger.info("[RPC Server] Host kicked $targetPlayerId from room ${session.roomId}.")
-    }
+        setBody("{\"ttl\":3600}")
+    }.bodyAsText().fromJson<OriginTurnCredentials>().toTurnCredentials()
 
     private suspend fun refreshHeartbeatTimer(playerId: Uuid) {
         refreshHeartbeatTimer(playerId, serverScope, heartbeatTimeoutMs) { timeoutPlayerId ->
@@ -239,25 +225,19 @@ class MinecraftSignalingServiceImpl(
         playerRoomMap.remove(playerId)
         val session = rooms[roomId] ?: return
         val isHost = (playerId == session.hostId)
-        val wasApplicant = session.pendingApplicants.remove(playerId) != null
+        session.pendingRequests.remove(playerId)?.deferred?.complete(
+            JoinResponse.Error("Disconnected before host response.")
+        )
         val wasPlayer = session.players.remove(playerId) != null
         if (isHost || session.players.isEmpty()) {
             rooms.remove(roomId)
             logger.info("[RPC Server] Room $roomId destroyed (Host $playerId left or room empty).")
-
-            val closeEvent = SignalEvent.RoomClosed(
-                reason = if (isHost) "Host has closed or left the room." else "Room empty."
-            )
+            val closeEvent =
+                SignalEvent.RoomClosed(reason = if (isHost) "Host has closed or left the room." else "Room empty.")
             session.players.keys().forEach { remainingId ->
                 if (remainingId != playerId) {
                     playerRoomMap.remove(remainingId)
                     playerEventFlows[remainingId]?.emit(closeEvent)
-                }
-            }
-            session.pendingApplicants.keys().forEach { applicantId ->
-                if (applicantId != playerId) {
-                    playerRoomMap.remove(applicantId)
-                    playerEventFlows[applicantId]?.emit(closeEvent)
                 }
             }
         } else {

@@ -11,10 +11,8 @@ import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
 import cn.rtast.peerlink.client.util.rpc.serializeCandidate
 import cn.rtast.peerlink.client.util.showNotification
-import cn.rtast.peerlink.data.webrtc.TurnCredentials
-import cn.rtast.peerlink.data.play.IntentType
-import cn.rtast.peerlink.data.play.PeerIntent
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import dev.kastle.webrtc.*
 import kotlinx.coroutines.CoroutineScope
@@ -27,7 +25,6 @@ import kotlin.uuid.toKotlinUuid
 class WebRTCClient(
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
-    private val roomId: String,
     private val onStatusChanged: (RTCDataChannel) -> Unit,
 ) {
     private var peerFactory: PeerConnectionFactory? = null
@@ -38,22 +35,6 @@ class WebRTCClient(
     @Volatile
     private var isRemoteDescriptionSet = false
     private val pendingCandidates = ConcurrentLinkedQueue<RTCIceCandidate>()
-
-    suspend fun requestJoin(): Boolean {
-        return try {
-            signalingService.sendIntent(
-                PeerIntent(
-                    type = IntentType.JOIN_REQUEST,
-                    targetRoomId = roomId
-                )
-            )
-            RpcManager.rpcLogger.info("[PeerLink] 已向房间 $roomId 发送加入意图，等待房主同意...")
-            true
-        } catch (e: Exception) {
-            RpcManager.rpcLogger.error("[PeerLink] 发送加入意图失败: ${e.message}", e)
-            false
-        }
-    }
 
     fun startP2PConnect(hostUuid: Uuid, turnCredentials: TurnCredentials) {
         this.hostPlayerUuid = hostUuid
@@ -172,8 +153,9 @@ class WebRTCClient(
         pc.setRemoteDescription(sdp, object : SetSessionDescriptionObserver {
             override fun onSuccess() {
                 RpcManager.rpcLogger.info("[PeerLink Client] 成功设置 Remote Answer SDP")
-                isRemoteDescriptionSet = true
+
                 synchronized(pendingCandidates) {
+                    isRemoteDescriptionSet = true
                     while (pendingCandidates.isNotEmpty()) {
                         val candidate = pendingCandidates.poll() ?: break
                         pc.addIceCandidate(candidate)
@@ -189,21 +171,31 @@ class WebRTCClient(
 
     fun handleRemoteCandidate(candidateJson: String) {
         val candidate = deserializeCandidate(candidateJson)
-        if (isRemoteDescriptionSet) {
-            peerConnection?.addIceCandidate(candidate)
-        } else pendingCandidates.add(candidate)
+        synchronized(pendingCandidates) {
+            if (isRemoteDescriptionSet) {
+                peerConnection?.addIceCandidate(candidate)
+            } else {
+                pendingCandidates.add(candidate)
+            }
+        }
     }
 
     fun close() {
         try {
             dataChannel?.close()
+            dataChannel = null
             peerConnection?.close()
+            peerConnection = null
             peerFactory?.dispose()
-            pendingCandidates.clear()
-            isRemoteDescriptionSet = false
+            peerFactory = null
+            synchronized(pendingCandidates) {
+                pendingCandidates.clear()
+                isRemoteDescriptionSet = false
+            }
             hostPlayerUuid = null
-            RpcManager.rpcLogger.info("WebRTC 连接已清理释放")
-        } catch (_: Exception) {
+            RpcManager.rpcLogger.info("WebRTC连接释放")
+        } catch (e: Exception) {
+            RpcManager.rpcLogger.error("清理WebRTC异常: ${e.message}")
         }
     }
 

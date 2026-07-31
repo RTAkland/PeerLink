@@ -11,19 +11,15 @@ import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
-import cn.rtast.peerlink.data.play.IntentType
+import cn.rtast.peerlink.data.play.JoinResponse
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import net.minecraft.client.gui.screens.ConnectScreen
 import net.minecraft.client.multiplayer.ServerData
 import net.minecraft.client.multiplayer.resolver.ServerAddress
 import net.minecraft.network.chat.Component
-import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.Duration.Companion.seconds
 
 object WebRTCJoinManager {
     private var currentClient: WebRTCClient? = null
@@ -31,6 +27,7 @@ object WebRTCJoinManager {
 
     fun joinRoom(roomId: String, onResult: (JoinResult) -> Unit) {
         cancelAll()
+
         if (!preCheck()) {
             onResult(JoinResult.P2PInitializationFailed)
             return
@@ -43,8 +40,7 @@ object WebRTCJoinManager {
 
         val client = WebRTCClient(
             scope = RpcManager.scope,
-            signalingService = signalingService,
-            roomId = roomId
+            signalingService = signalingService
         ) { channel ->
             WebRTCClientManager.setupWebRtcSession(channel)
             minecraft.execute {
@@ -59,67 +55,58 @@ object WebRTCJoinManager {
         }
         currentClient = client
 
-        val isTerminalStateReached = AtomicBoolean(false)
-        fun dispatchResult(result: JoinResult) = minecraft.execute { onResult(result) }
-
         observeJob = RpcManager.scope.launch {
-            signalingService.observeEvents().collect { event ->
-                when (event) {
-                    is SignalEvent.TurnCredentialsIssued -> {
-                        isTerminalStateReached.set(true)
-                        dispatchResult(JoinResult.Accepted)
-                        currentClient?.startP2PConnect(event.targetPlayerId, event.credentials)
-                    }
-
-                    is SignalEvent.MessageReceived -> {
-                        when (event.message.type) {
-                            SignalingMessage.SignalingType.Answer -> currentClient?.handleRemoteAnswer(event.message.payload)
-                            SignalingMessage.SignalingType.ICE -> currentClient?.handleRemoteCandidate(event.message.payload)
-                            else -> {}
-                        }
-                    }
-
-                    is SignalEvent.IntentResult -> {
-                        when (event.intentType) {
-                            IntentType.JOIN_REQUEST -> {
-                                if (!event.success) {
-                                    isTerminalStateReached.set(true)
-                                    dispatchResult(JoinResult.InvalidRoomId)
-                                    println("invalid room id")
-                                }
+            launch {
+                signalingService.observeEvents().collect { event ->
+                    when (event) {
+                        is SignalEvent.MessageReceived -> {
+                            when (event.message.type) {
+                                SignalingMessage.SignalingType.Answer -> currentClient?.handleRemoteAnswer(event.message.payload)
+                                SignalingMessage.SignalingType.ICE -> currentClient?.handleRemoteCandidate(event.message.payload)
+                                else -> {}
                             }
-
-                            IntentType.REJECT_JOIN -> {
-                                isTerminalStateReached.set(true)
-                                dispatchResult(JoinResult.RejectJoin)
-                            }
-
-                            else -> {}
                         }
-                    }
 
-                    is SignalEvent.PlayerKicked -> {
-                        isTerminalStateReached.set(true)
-                        showNotification(
-                            Component.translatable("peerlink.p2p.failed"),
-                            Component.literal(event.reason ?: "Kicked from room by host.")
-                        )
-                    }
+                        is SignalEvent.PlayerKicked -> {
+                            showNotification(
+                                Component.translatable("peerlink.p2p.failed"),
+                                Component.literal(event.reason ?: "Kicked from room by host.")
+                            )
+                            cancelAll()
+                        }
 
-                    else -> {}
+                        else -> {}
+                    }
                 }
             }
-        }
+            minecraft.execute { onResult(JoinResult.PendingJoinRequest) }
+            val response = try {
+                signalingService.joinRoom(roomId)
+            } catch (e: Exception) {
+                JoinResponse.Error(e.message ?: "RPC network error")
+            }
+            minecraft.execute {
+                when (response) {
+                    is JoinResponse.Accepted -> {
+                        onResult(JoinResult.Accepted)
+                        currentClient?.startP2PConnect(response.hostId, response.credentials)
+                    }
 
-        runBlocking {
-            val requestSent = client.requestJoin()
-            if (requestSent) {
-                if (!isTerminalStateReached.get()) {
-                    dispatchResult(JoinResult.PendingJoinRequest)
+                    is JoinResponse.Rejected -> {
+                        onResult(JoinResult.RejectJoin)
+                        cancelAll()
+                    }
+
+                    is JoinResponse.Error -> {
+                        onResult(JoinResult.InvalidRoomId)
+                        cancelAll()
+                    }
+
+                    JoinResponse.InvalidRoom -> {
+                        onResult(JoinResult.InvalidRoomId)
+                        cancelAll()
+                    }
                 }
-            } else {
-                isTerminalStateReached.set(true)
-                dispatchResult(JoinResult.JoinRequestIntentFailed)
             }
         }
     }

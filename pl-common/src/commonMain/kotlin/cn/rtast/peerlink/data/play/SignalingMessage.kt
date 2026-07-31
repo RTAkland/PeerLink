@@ -18,6 +18,6 @@ data class SignalingMessage(
     val payload: String,
 ) {
     enum class SignalingType {
-        Offer, Answer, ICE
+        Offer, Answer, Ice
     }
 }

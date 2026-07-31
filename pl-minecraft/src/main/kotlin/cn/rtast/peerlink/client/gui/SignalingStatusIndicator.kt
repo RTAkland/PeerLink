@@ -7,9 +7,9 @@
 
 package cn.rtast.peerlink.client.gui
 
+import cn.rtast.peerlink.client.PeerLinkInitializer.Companion.rpcClient
 import cn.rtast.peerlink.client.screen.PeerLinkHostScreen
 import cn.rtast.peerlink.client.screen.PeerLinkScreen
-import cn.rtast.peerlink.client.util.rpc.RpcManager
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -61,9 +61,9 @@ object SignalingStatusIndicator {
         val size = 8 * SCALE
         val x = screenWidth - size - MARGIN
         val y = MARGIN
-        val highlight = if (RpcManager.isConnected) 0xFF6EE7B7.toInt() else 0xFFFCA5A5.toInt()
-        val mainColor = if (RpcManager.isConnected) 0xFF10B981.toInt() else 0xFFEF4444.toInt()
-        val shadow = if (RpcManager.isConnected) 0xFF047857.toInt() else 0xFFB91C1C.toInt()
+        val highlight = if (rpcClient?.isConnected ?: false) 0xFF6EE7B7.toInt() else 0xFFFCA5A5.toInt()
+        val mainColor = if (rpcClient?.isConnected ?: false) 0xFF10B981.toInt() else 0xFFEF4444.toInt()
+        val shadow = if (rpcClient?.isConnected ?: false) 0xFF047857.toInt() else 0xFFB91C1C.toInt()
 
         for (row in 0 until 8) {
             for (col in 0 until 8) {
@@ -83,8 +83,8 @@ object SignalingStatusIndicator {
         }
 
         if (mouseX in x..(x + size) && mouseY in y..(y + size)) {
-            val statusText = if (RpcManager.isConnected) {
-                val latency = RpcManager.latencyMs
+            val statusText = if (rpcClient?.isConnected ?: false) {
+                val latency = rpcClient?.latencyMs?.value?.toInt() ?: -1
                 val latencyColor = when {
                     latency !in 0..2000 -> 0x555555
                     latency <= 100 -> 0x52C41A

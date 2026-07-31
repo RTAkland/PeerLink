@@ -37,5 +37,5 @@
   "peerlink.guest": "Guest",
   "peerlink.waitingForHostApproval": "Waiting for host approval...",
   "peerlink.hostRejectedJoinRequest": "Join request was rejected by the host",
-  "peerlink.signalSentFailed": "Failed to send join intent to signaling server"
+  "peerlink.signalingRespondError": "Signaling Server Respond An Error"
 }

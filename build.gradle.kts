@@ -9,7 +9,7 @@ plugins {
 
 subprojects {
     group = "cn.rtast.peerlink"
-    version = "0.0.1"
+    version = providers.gradleProperty("modVersion").get()
 
     repositories {
         mavenCentral()

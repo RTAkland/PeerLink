@@ -7,12 +7,14 @@
 
 package cn.rtast.peerlink.client
 
-import cn.rtast.klogging.KLogging
-import cn.rtast.klogging.Logger
-import cn.rtast.peerlink.client.util.GlobalAppScope
+import cn.rtast.peerlink.client.data.PeerLinkClientConfig
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import net.minecraft.client.Minecraft
 
 val minecraft = Minecraft.getInstance()
-val plScope = GlobalAppScope()
+val scope = CoroutineScope(Dispatchers.IO)
 
-val logger = KLogging.getLogger("PeerLink")
+val defaultConfig = PeerLinkClientConfig(
+    "wss://peer.7o.ink"  // Thanks to xiaoman1221(github.com/xiaoman1221) for providing the signaling server
+)

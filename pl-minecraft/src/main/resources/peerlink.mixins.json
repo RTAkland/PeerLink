@@ -14,7 +14,6 @@
     "requireAnnotations": true
   },
   "client": [
-    "MinecraftDisconnectedMixin",
     "screen.MultiplayerScreenMixin",
     "screen.PauseScreenMixin"
   ]

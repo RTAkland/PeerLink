@@ -14,6 +14,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.world.level.storage.LevelResource
 import java.io.File
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.collections.set
 import kotlin.uuid.Uuid
 
 object HostPlayerStorage {

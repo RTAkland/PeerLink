@@ -6,10 +6,8 @@
 
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.PeerLinkInitializer
 import cn.rtast.peerlink.client.data.PendingJoinRequest
-import cn.rtast.peerlink.client.util.rpc.RpcManager
-import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
-import cn.rtast.peerlink.service.MinecraftSignalingService
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
 import net.minecraft.client.Minecraft
@@ -27,7 +25,6 @@ import net.minecraft.world.entity.player.PlayerSkin
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.uuid.Uuid
 
 class PendingJoinRequestsScreen(
     private val lastScreen: Screen,
@@ -52,15 +49,14 @@ class PendingJoinRequestsScreen(
         this.pollJob = this.screenScope.launch {
             while (isActive) {
                 try {
-                    val currentRequests = WebRTCHostManager.pendingJoinRequests.values.toList()
-                    this@PendingJoinRequestsScreen.minecraft.execute {
-                        updateRequestsUI(currentRequests)
-                    }
+                    val manager = PeerLinkInitializer.manager
+                    val currentRequests = manager?.pendingJoinRequests?.values?.toList() ?: emptyList()
+                    this@PendingJoinRequestsScreen.minecraft.execute { updateRequestsUI(currentRequests) }
                 } catch (e: Exception) {
                     if (e is CancellationException) break
                     e.printStackTrace()
                 }
-                delay(2000.milliseconds)
+                delay(1000.milliseconds)
             }
         }
     }
@@ -160,12 +156,10 @@ class PendingJoinRequestsScreen(
                 val skin = this.playerSkinFuture?.getNow(null)?.orElse(null) ?: DefaultPlayerSkin.get(javaUuid)
                 PlayerFaceExtractor.extractRenderState(graphics, skin, headX, headY, headSize)
             }
-
             val textX = headX + headSize + 8
             val textY = y + (this.contentHeight - this@PendingJoinRequestsScreen.font.lineHeight) / 2
             this.applicantNameWidget.setPosition(textX, textY)
             this.applicantNameWidget.extractWidgetRenderState(graphics, mouseX, mouseY, x.toFloat())
-
             val buttonY = y + this.contentHeight / 2 - 10
             this.acceptButton.setPosition(x + this.contentWidth - 16 - 42, buttonY)
             this.acceptButton.extractRenderState(graphics, mouseX, mouseY, a)
@@ -178,15 +172,17 @@ class PendingJoinRequestsScreen(
             this.isProcessing = true
             this.acceptButton.active = false
             this.rejectButton.active = false
+
             this@PendingJoinRequestsScreen.screenScope.launch {
-                val applicantUuid: Uuid = request.applicantId
+                val applicantUuid = request.applicantId
                 try {
-                    RpcManager.minecraftSignalingService?.respondJoinRequest(applicantUuid, accept)
+                    PeerLinkInitializer.manager?.removePendingRequest(applicantUuid)
+                    val signalingService = PeerLinkInitializer.rpcClient?.signalingService
+                    signalingService?.respondJoinRequest(applicantUuid, accept, if (accept) null else "Host rejected")
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
                     this@PendingJoinRequestsScreen.minecraft.execute {
-                        WebRTCHostManager.removePendingRequest(applicantUuid)
                         this@PendingJoinRequestsScreen.pendingRequestSelectionList?.removeRequest(this@_Entry)
                     }
                 }

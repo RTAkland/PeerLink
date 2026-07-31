@@ -6,8 +6,12 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.data.JoinResult
-import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
+import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.util.showNotification
+import cn.rtast.peerlink.data.play.JoinResponse
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
@@ -19,6 +23,7 @@ import net.minecraft.network.chat.Component
 class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable("peerlink.joinGameViaWebRTC")) {
     private var selectButton: Button? = null
     private var roomIdEdit: EditBox? = null
+    private val screenScope = CoroutineScope(Dispatchers.IO)
 
     companion object {
         private val roomIdComponent = Component.translatable("peerlink.roomid")
@@ -64,27 +69,50 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     private fun updateSelectButtonStatus() {
-        this.selectButton?.active = this.roomIdEdit!!.value.isNotBlank()
+        val isRpcConnected = PeerLinkInitializer.rpcClient?.isConnected == true
+        this.selectButton?.active = isRpcConnected && this.roomIdEdit!!.value.isNotBlank()
     }
 
     private fun joinRoom() {
         val roomId = roomIdEdit!!.value.trim()
         if (roomId.isBlank()) return
+        val manager = PeerLinkInitializer.manager ?: return
+        val rpcClient = PeerLinkInitializer.rpcClient
+        if (rpcClient?.isConnected != true) {
+            showNotification(
+                Component.translatable("peerlink.joinFailed"),
+                Component.translatable("peerlink.signalingServerNotConnected")
+            )
+            return
+        }
         this.selectButton?.active = false
         try {
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
-                    { WebRTCClientManager.cancelAll(); this.updateSelectButtonStatus() }
+                    { this.updateSelectButtonStatus() }
                 ) { screen ->
-                    WebRTCClientManager.joinRoom(roomId) { result ->
-                        when (result) {
-                            JoinResult.PendingJoinRequest -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
-                            JoinResult.RejectJoin -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
-                            JoinResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
-                            JoinResult.InvalidRoomId -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                            JoinResult.JoinRequestIntentFailed -> screen.updateTitle(Component.translatable("peerlink.signalSentFailed"))
-                            JoinResult.SignalingServerNotConnected -> screen.updateTitle(Component.translatable("peerlink.signalingServerNotConnected"))
+                    screenScope.launch {
+                        try {
+                            manager.joinRoom(roomId, { response ->
+                                minecraft.execute {
+                                    when (response) {
+                                        is JoinResponse.Rejected -> screen.updateTitle(
+                                            Component.translatable("peerlink.hostRejectedJoinRequest")
+                                                .append(" ${response.reason}")
+                                        )
+
+                                        is JoinResponse.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                                        is JoinResponse.InvalidRoom -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                                        is JoinResponse.Error -> screen.updateTitle(
+                                            Component.translatable("peerlink.signalingRespondError")
+                                                .append(" ${response.message}")
+                                        )
+                                    }
+                                }
+                            }) { minecraft.execute { screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval")) } }
+                        } catch (e: Exception) {
+                            minecraft.execute { screen.updateTitle(Component.literal(e.message ?: "Connection Error")) }
                         }
                     }
                 }

@@ -37,5 +37,5 @@
   "peerlink.guest": "普通玩家",
   "peerlink.waitingForHostApproval": "等待房主响应进房请求...",
   "peerlink.hostRejectedJoinRequest": "房主拒绝了你的进房请求",
-  "peerlink.signalSentFailed": "向信令服务器发送进房请求失败"
+  "peerlink.signalingRespondError": "信令服务器返回了异常"
 }

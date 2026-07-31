@@ -7,8 +7,8 @@
 
 package cn.rtast.peerlink.client.mixin.permission;
 
+import cn.rtast.peerlink.client.PeerLinkInitializer;
 import cn.rtast.peerlink.client.util.HostPlayerStorage;
-import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager;
 import com.mojang.authlib.GameProfile;
 import kotlin.uuid.UuidKt;
 import net.minecraft.server.level.ServerPlayer;
@@ -30,10 +30,14 @@ public abstract class PlayerPermissionMixin extends Player {
 
     @Inject(method = "permissions", at = @At("HEAD"), cancellable = true)
     private void peerlink$injectPermission(CallbackInfoReturnable<PermissionSet> cir) {
-        if (WebRTCHostManager.getCurrentRoomId() != null) {
-            var nameAndId = this.nameAndId();
-            if (HostPlayerStorage.isOp(UuidKt.toKotlinUuid(nameAndId.id()))) {
-                cir.setReturnValue(LevelBasedPermissionSet.OWNER);
+        var manager = PeerLinkInitializer.Companion.getManager();
+        if (manager != null) {
+            var currentRoomState = manager.getCurrentRoomState();
+            if (currentRoomState != null) {
+                var nameAndId = this.nameAndId();
+                if (HostPlayerStorage.isOp(UuidKt.toKotlinUuid(nameAndId.id()))) {
+                    cir.setReturnValue(LevelBasedPermissionSet.OWNER);
+                }
             }
         }
     }

@@ -105,18 +105,17 @@ class MinecraftSignalingServiceImpl(
     override suspend fun joinRoom(roomId: String): JoinResponse {
         val applicant = context.requirePlayer()
         refreshHeartbeatTimer(applicant.uuid)
-        val hostId = kvRepository.getRoomHost(roomId)
-            ?: return JoinResponse.Error("Room $roomId does not exist.")
+        val hostId = kvRepository.getRoomHost(roomId) ?: return JoinResponse.InvalidRoom
         val players = kvRepository.getRoomPlayers(roomId)
-        if (players.any { it.uuid == applicant.uuid }) {
-            return JoinResponse.Error("You are already in this room.")
-        }
+        if (players.any { it.uuid == applicant.uuid }) return JoinResponse.Error("You are already in this room.")
         leaveRoomInternal(applicant.uuid)
         val deferred = CompletableDeferred<JoinResponse>()
         val localContext = localRoomContexts.computeIfAbsent(roomId) { LocalRoomContext(roomId, hostId) }
         localContext.pendingRequests[applicant.uuid] = DeferredRequest(applicant, deferred)
         kvRepository.setPlayerRoom(applicant.uuid, roomId)
         val hostFlow = playerEventFlows[hostId]
+        // emit an event to source player, it means signaling received the request and waiting for host approval
+//        playerEventFlows[applicant.uuid]?.emit(SignalEvent.JoinRequested(applicant.uuid, applicant.name))
         if (hostFlow != null) {
             hostFlow.emit(SignalEvent.JoinRequested(applicant.uuid, applicant.name))
             logger.info("[RPC Server] Join request from ${applicant.name} sent to host $hostId")
@@ -151,7 +150,6 @@ class MinecraftSignalingServiceImpl(
             val credentials = fetchTurnCredentials()
             pending.deferred.complete(JoinResponse.Accepted(hostId, credentials))
             val turnEventForHost = SignalEvent.TurnCredentialsIssued(applicantId, credentials)
-            playerEventFlows[hostId]?.emit(turnEventForHost)
             val joinEvent = SignalEvent.PlayerJoined(pending.applicant)
             val allPlayers = kvRepository.getRoomPlayers(roomId)
             allPlayers.forEach { existing ->
@@ -159,10 +157,11 @@ class MinecraftSignalingServiceImpl(
                     joinEvent
                 )
             }
+            playerEventFlows[hostId]?.emit(turnEventForHost)
             logger.info("[RPC Server] Host accepted ${pending.applicant.name} into room $roomId.")
         } else {
-            kvRepository.removePlayerRoom(applicantId)
             pending.deferred.complete(JoinResponse.Rejected(reason ?: "Host rejected your request."))
+            kvRepository.removePlayerRoom(applicantId)
             logger.info("[RPC Server] Host rejected $applicantId. Reason: $reason")
         }
     }

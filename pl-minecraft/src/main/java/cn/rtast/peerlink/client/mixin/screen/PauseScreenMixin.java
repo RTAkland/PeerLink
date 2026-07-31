@@ -11,7 +11,6 @@ import cn.rtast.peerlink.client.gui.PeerLinkButtons;
 import cn.rtast.peerlink.client.screen.HostManagementScreen;
 import cn.rtast.peerlink.client.screen.PeerLinkHostScreen;
 import cn.rtast.peerlink.client.screen.PendingJoinRequestsScreen;
-import cn.rtast.peerlink.client.util.rpc.RpcManager;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.PauseScreen;
@@ -22,8 +21,6 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-
-import java.util.Objects;
 
 @Mixin(PauseScreen.class)
 public abstract class PauseScreenMixin extends Screen {

@@ -13,14 +13,6 @@ import kotlin.uuid.Uuid
 
 @Serializable
 sealed interface SignalEvent {
-
-    @Serializable
-    data class IntentResult(
-        val intentType: IntentType,
-        val success: Boolean,
-        val reason: String? = null,
-    ) : SignalEvent
-
     @Serializable
     data class JoinRequested(
         val applicantId: Uuid,

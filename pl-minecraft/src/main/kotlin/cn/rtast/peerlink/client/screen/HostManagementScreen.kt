@@ -6,8 +6,8 @@
 
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.PeerLinkInitializer.Companion.rpcClient
 import cn.rtast.peerlink.client.util.HostPlayerStorage
-import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.data.play.PlayerInfo
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
@@ -54,7 +54,7 @@ class HostManagementScreen(
         this.pollJob = this.screenScope.launch {
             while (isActive) {
                 try {
-                    val players = RpcManager.minecraftSignalingService?.getRoomState()
+                    val players = rpcClient?.signalingService?.getRoomState()
                         ?.members?.toMutableList()
                         ?.also { it.removeIf { element -> element.uuid == minecraft.gameProfile.id.toKotlinUuid() } }
                         ?: emptyList()
@@ -203,7 +203,7 @@ class HostManagementScreen(
             this.opButton.active = false
             this@HostManagementScreen.screenScope.launch {
                 try {
-                    RpcManager.minecraftSignalingService?.kickPlayer(playerInfo.uuid, "Kicked by host")
+                    rpcClient?.signalingService?.kickPlayer(playerInfo.uuid, "Kicked by host")
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {

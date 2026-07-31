@@ -1,6 +1,6 @@
 services:
   signaling:
-    container_name: Signaling
+    container_name: PeerLinkSignalingServer
     image: ghcr.io/rtakland/peerlink:latest
     ports:
       - "7879:7879"

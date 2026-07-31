@@ -9,12 +9,13 @@ package cn.rtast.peerlink.client.util.rpc
 import cn.rtast.klogging.KLogging
 import cn.rtast.klogging.LogLevel
 import cn.rtast.peerlink.client.minecraft
+import cn.rtast.peerlink.client.plScope
 import cn.rtast.peerlink.data.play.PlayerInfo
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
 import kotlinx.coroutines.*
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.time.Duration.Companion.milliseconds
+import kotlin.coroutines.cancellation.CancellationException
 import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.toKotlinUuid
 
@@ -33,42 +34,33 @@ object RpcManager {
 
     @Volatile
     var latencyMs: Long = -1L
-        private set
 
     val rpcLogger = KLogging.getLogger("PeerLink | RPC").also { it.setLoggingLevel(LogLevel.INFO) }
 
     private var mainJob: Job? = null
-    var scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
 
     fun start(url: String) {
         if (!isRunning.compareAndSet(false, true)) return
-        if (!scope.isActive) {
-            scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-        }
-
-        mainJob = scope.launch {
-            while (isActive && isRunning.get()) {
+        mainJob = plScope.launch {
+            while (isRunning.get()) {
                 try {
                     connectAndListen(url)
                 } catch (e: CancellationException) {
                     throw e
                 } catch (e: Exception) {
-                    rpcLogger.error("RPC 连接断开或发生异常: ${e.message}")
+                    rpcLogger.error("RPC 连接断开: ${e.message}")
                 } finally {
-                    isConnected = false
-                    minecraftSignalingService = null
-                    serverSignalingService = null
+                    resetState()
                 }
-
-                if (isActive && isRunning.get()) {
-                    rpcLogger.debug("将在 10 秒后尝试重新连接信令服务器...")
-                    delay(5000.milliseconds)
+                if (isRunning.get()) {
+                    rpcLogger.debug("10 秒后尝试重新连接信令服务器")
+                    delay(10.seconds)
                 }
             }
         }
     }
 
-    private suspend fun connectAndListen(url: String) {
+    private suspend fun connectAndListen(url: String): Nothing = coroutineScope {
         val rpcSession = httpClient.rpcClient("$url/rpc")
         val minecraftService = rpcSession.minecraftSignalingService()
         val serverService = rpcSession.serverSignalingService()
@@ -84,14 +76,8 @@ object RpcManager {
         minecraftSignalingService = minecraftService
         serverSignalingService = serverService
         isConnected = true
-        coroutineScope {
-            val heartbeatJob = launch { startHeartbeatLoop(minecraftService) }
-            try {
-                awaitCancellation()
-            } finally {
-                heartbeatJob.cancel()
-            }
-        }
+        launch { startHeartbeatLoop(minecraftService) }
+        awaitCancellation()
     }
 
     private suspend fun startHeartbeatLoop(service: MinecraftSignalingService) {
@@ -112,11 +98,16 @@ object RpcManager {
         }
     }
 
-    fun stop() {
-        isRunning.set(false)
+    private fun resetState() {
         isConnected = false
+        latencyMs = -1L
         minecraftSignalingService = null
         serverSignalingService = null
+    }
+
+    fun stop() {
+        isRunning.set(false)
+        resetState()
         mainJob?.cancel()
         mainJob = null
     }

@@ -7,6 +7,7 @@
 
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.plScope
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
@@ -54,6 +55,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD)
         private val APPLY_CHANGES = Component.translatable("menu.multiplayerOptions.applyChanges")
         private val PLACEHOLDER_ROOM_ID = Component.translatable("peerlink.screen.host.roomIdPlaceholder")
+        private val ONLINE_MODE = Component.translatable("peerlink.screen.host.onlineMode")
     }
 
     override fun init() {
@@ -89,7 +91,6 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     this.updateApplyChangesActiveState()
                 }
         )
-//        this.allowCommands = singleplayerServer.commandsAllowedForOtherPlayers()
         this.initialAllowCommands = this.allowCommands
         val allowCommandsButton = otherPlayerSettings.addChild(
             CycleButton.onOffBuilder(this.allowCommands).create(
@@ -99,6 +100,13 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 this.updateApplyChangesActiveState()
             }
         )
+        val securitySettings = content.addChild(LinearLayout.horizontal().spacing(8))
+        securitySettings.defaultCellSetting().alignHorizontallyCenter()
+        securitySettings.addChild(CycleButton.onOffBuilder(this.onlineMode).create(ONLINE_MODE) { _, value ->
+            this.onlineMode = value
+            this.updateApplyChangesActiveState()
+        })
+
         if (singleplayerServer.isHardcore) {
             gameModeButton.active = false
             gameModeButton.setTooltip(WorldOptionsScreen.GAME_MODE_DISABLED_HARDCORE_TOOLTIP)
@@ -114,26 +122,33 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             }
             if (this.peerLinkEnabled) {
                 if (WebRTCHostManager.currentRoomId == null) {
-                    showNotification(Component.translatable("peerlink.p2p.creatingRoom"), null)
-                    WebRTCHostManager.openWebRTCRoom(
-                        RpcManager.scope,
-                        RpcManager.minecraftSignalingService!!,
-                        onlineMode, allowCommands, gameMode
-                    ) { result ->
-                        result.onSuccess {
-                            this.initialPeerLinkEnabled = this.peerLinkEnabled
-                            this.initialOnlineMode = this.onlineMode
-                            this.initialGameMode = this.gameMode
-                            this.initialAllowCommands = this.allowCommands
-                            updateRoomId(Component.literal(it.roomId), true)
+                    if (RpcManager.minecraftSignalingService == null) {
+                        showNotification(
+                            Component.translatable("peerlink.roomCreateFailed"),
+                            Component.translatable("peerlink.signalingServerNotConnected")
+                        )
+                    } else {
+                        showNotification(Component.translatable("peerlink.p2p.creatingRoom"), null)
+                        WebRTCHostManager.openWebRTCRoom(
+                            plScope,
+                            RpcManager.minecraftSignalingService!!,
+                            onlineMode, allowCommands, gameMode
+                        ) { result ->
+                            result.onSuccess {
+                                this.initialPeerLinkEnabled = this.peerLinkEnabled
+                                this.initialOnlineMode = this.onlineMode
+                                this.initialGameMode = this.gameMode
+                                this.initialAllowCommands = this.allowCommands
+                                updateRoomId(Component.literal(it.roomId), true)
+                            }
+                            result.onFailure {
+                                showNotification(
+                                    Component.translatable("peerlink.roomCreateFailed"),
+                                    Component.literal(it.message ?: "")
+                                )
+                            }
+                            this.updateApplyChangesActiveState()
                         }
-                        result.onFailure {
-                            showNotification(
-                                Component.translatable("peerlink.roomCreateFailed"),
-                                Component.literal(it.message ?: "")
-                            )
-                        }
-                        this.updateApplyChangesActiveState()
                     }
                 } else {
                     showNotification(Component.translatable("peerlink.p2p.alreadyHosting"), null)

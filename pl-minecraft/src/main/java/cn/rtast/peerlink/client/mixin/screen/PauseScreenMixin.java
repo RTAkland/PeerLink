@@ -49,11 +49,11 @@ public abstract class PauseScreenMixin extends Screen {
                     -1, -1
             ));
             iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(
-                    new PendingJoinRequestsScreen(this, Objects.requireNonNull(RpcManager.getMinecraftSignalingService())),
+                    new PendingJoinRequestsScreen(this),
                     Component.translatable("peerlink.pendingJoinRequests"), null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/pending_join_request"),
                     -1, -1, 15, 15
             ));
-            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new HostManagementScreen(this, RpcManager.getMinecraftSignalingService()),
+            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new HostManagementScreen(this),
                     Component.translatable("peerlink.hostManagement"),
                     null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/host_management"),
                     -1, -1, 15, 14

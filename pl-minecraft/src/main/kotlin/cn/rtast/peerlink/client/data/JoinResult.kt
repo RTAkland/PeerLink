@@ -9,9 +9,9 @@ package cn.rtast.peerlink.client.data
 
 enum class JoinResult {
     InvalidRoomId,
-    P2PInitializationFailed,
     RejectJoin,
     Accepted,
     PendingJoinRequest,
-    JoinRequestIntentFailed
+    JoinRequestIntentFailed,
+    SignalingServerNotConnected
 }

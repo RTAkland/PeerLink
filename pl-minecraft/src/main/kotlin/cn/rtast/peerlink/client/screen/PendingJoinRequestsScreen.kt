@@ -7,6 +7,7 @@
 package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.data.PendingJoinRequest
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import com.mojang.authlib.GameProfile
@@ -30,7 +31,6 @@ import kotlin.uuid.Uuid
 
 class PendingJoinRequestsScreen(
     private val lastScreen: Screen,
-    private val service: MinecraftSignalingService,
 ) : Screen(Component.translatable("peerlink.pendingJoinRequests")) {
     private val layout = HeaderAndFooterLayout(this)
     private var pendingRequestSelectionList: PendingRequestSelectionList? = null
@@ -181,7 +181,7 @@ class PendingJoinRequestsScreen(
             this@PendingJoinRequestsScreen.screenScope.launch {
                 val applicantUuid: Uuid = request.applicantId
                 try {
-                    service.respondJoinRequest(applicantUuid, accept)
+                    RpcManager.minecraftSignalingService?.respondJoinRequest(applicantUuid, accept)
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {

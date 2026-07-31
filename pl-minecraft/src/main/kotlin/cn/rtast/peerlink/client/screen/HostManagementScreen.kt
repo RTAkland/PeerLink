@@ -7,8 +7,8 @@
 package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.util.HostPlayerStorage
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.data.play.PlayerInfo
-import cn.rtast.peerlink.service.MinecraftSignalingService
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
 import net.minecraft.client.Minecraft
@@ -31,7 +31,6 @@ import kotlin.uuid.toKotlinUuid
 
 class HostManagementScreen(
     private val screen: Screen,
-    private val service: MinecraftSignalingService,
 ) : Screen(Component.translatable("peerlink.hostManagement")) {
     private val layout = HeaderAndFooterLayout(this)
     private var playerSelectionList: PlayerSelectionList? = null
@@ -55,9 +54,10 @@ class HostManagementScreen(
         this.pollJob = this.screenScope.launch {
             while (isActive) {
                 try {
-                    val players = service.getRoomState()
-                        .members.toMutableList()
-                        .also { it.removeIf { element -> element.uuid == minecraft.gameProfile.id.toKotlinUuid() } }
+                    val players = RpcManager.minecraftSignalingService?.getRoomState()
+                        ?.members?.toMutableList()
+                        ?.also { it.removeIf { element -> element.uuid == minecraft.gameProfile.id.toKotlinUuid() } }
+                        ?: emptyList()
                     minecraft.execute { updatePlayerListUI(players) }
                 } catch (e: Exception) {
                     if (e is CancellationException) break
@@ -203,7 +203,7 @@ class HostManagementScreen(
             this.opButton.active = false
             this@HostManagementScreen.screenScope.launch {
                 try {
-                    service.kickPlayer(playerInfo.uuid, "Kicked by host")
+                    RpcManager.minecraftSignalingService?.kickPlayer(playerInfo.uuid, "Kicked by host")
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {

@@ -14,7 +14,7 @@
   "peerlink.p2p.icefailed": "ICE 连接失败",
   "peerlink.signaling.invalidRoomId": "无效的房间ID",
   "peerlink.openToWebRTC": "通过PeerLink对WebRTC开放世界",
-  "peerlink.screen.host.enable": "PeerLink主机",
+  "peerlink.screen.host.enable": "对WebRTC开放世界",
   "peerlink.screen.host.onlineMode": "正版验证",
   "peerlink.screen.host.roomIdHeader": "房间ID",
   "peerlink.screen.host.roomIdPlaceholder": "未创建房间",

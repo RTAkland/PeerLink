@@ -14,7 +14,7 @@
   "peerlink.p2p.icefailed": "ICE Connection Failed",
   "peerlink.signaling.invalidRoomId": "Invalid Room ID",
   "peerlink.openToWebRTC": "Open to WebRTC",
-  "peerlink.screen.host.enable": "PeerLink Hosting",
+  "peerlink.screen.host.enable": "Open to WebRTC",
   "peerlink.screen.host.onlineMode": "Online Mode",
   "peerlink.screen.host.roomIdHeader": "Room ID",
   "peerlink.screen.host.roomIdPlaceholder": "Room not created",

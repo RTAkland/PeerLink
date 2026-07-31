@@ -8,26 +8,19 @@ package cn.rtast.peerlink.client.webrtc.host
 
 import cn.rtast.peerlink.client.data.PendingJoinRequest
 import cn.rtast.peerlink.client.minecraft
-import cn.rtast.peerlink.client.mixin.ClientConnectionAccessor
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
 import cn.rtast.peerlink.client.util.HostPlayerStorage
-import cn.rtast.peerlink.client.util.network.ConnectionInjector
 import cn.rtast.peerlink.client.util.rpc.RpcManager
-import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
-import dev.kastle.webrtc.RTCDataChannel
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import net.minecraft.network.protocol.PacketFlow
-import net.minecraft.network.protocol.handshake.HandshakeProtocols
 import net.minecraft.server.MinecraftServer
-import net.minecraft.server.network.ServerHandshakePacketListenerImpl
 import net.minecraft.world.level.GameType
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.time.Duration.Companion.milliseconds
@@ -43,12 +36,6 @@ object WebRTCHostManager {
         private set
     val pendingJoinRequests = ConcurrentHashMap<Uuid, PendingJoinRequest>()
 
-    fun removeSession(clientUuid: Uuid) {
-        activeSessions.remove(clientUuid)?.close()
-        pendingTurnConfigs.remove(clientUuid)
-        removePendingRequest(clientUuid)
-    }
-
     fun removePendingRequest(clientUuid: Uuid) {
         pendingJoinRequests.remove(clientUuid)?.timeoutJob?.cancel()
     }
@@ -62,7 +49,7 @@ object WebRTCHostManager {
             try {
                 val roomState = signalingService.createRoom()
                 currentRoomId = roomState.roomId
-                RpcManager.rpcLogger.info("房间创建成功 RoomId: ${roomState.roomId}")
+                RpcManager.rpcLogger.info("房间创建成功 ${roomState.roomId}")
                 signalListenJob?.cancel()
                 signalListenJob = launch {
                     signalingService.observeEvents().collect { event ->
@@ -71,7 +58,7 @@ object WebRTCHostManager {
                                 val targetPlayerUuid = event.targetPlayerId
                                 pendingTurnConfigs[targetPlayerUuid] = event.credentials
                                 removePendingRequest(targetPlayerUuid)
-                                RpcManager.rpcLogger.info("[PeerLink Host] 收到玩家 $targetPlayerUuid 的 TURN 凭证，准备接收 Offer")
+                                RpcManager.rpcLogger.info("[PeerLink Host] 收到玩家 $targetPlayerUuid 的 TURN 凭证准备接收 Offer")
                             }
 
                             is SignalEvent.MessageReceived -> {
@@ -145,7 +132,7 @@ object WebRTCHostManager {
                     scope = scope,
                     signalingService = signalingService,
                     iceConfig = iceConfig
-                ) { dataChannel -> injectClientDataChannelToIntegratedServer(dataChannel) }
+                )
                 activeSessions[fromPlayerUuid] = session
                 session.handleOfferAndCreateAnswer(message.payload)
             }
@@ -158,33 +145,22 @@ object WebRTCHostManager {
         }
     }
 
-    private fun injectClientDataChannelToIntegratedServer(dataChannel: RTCDataChannel) {
-        val server = minecraft.singleplayerServer ?: return
-        server.execute {
-            try {
-                val rtcChannel = WebRTCChannel(dataChannel)
-                val connection = ConnectionInjector.fromChannel(
-                    rtcChannel, PacketFlow.SERVERBOUND, null
-                )
-                (connection as ClientConnectionAccessor).`peerlink$setChannel`(rtcChannel)
-                connection.setupInboundProtocol(
-                    HandshakeProtocols.SERVERBOUND,
-                    ServerHandshakePacketListenerImpl(server, connection)
-                )
-                server.connection.connections.add(connection)
-            } catch (_: Exception) {
-            }
-        }
+    fun removeSession(clientUuid: Uuid) {
+        val session = activeSessions.remove(clientUuid)
+        pendingTurnConfigs.remove(clientUuid)
+        removePendingRequest(clientUuid)
+        session?.close()
     }
 
     @JvmStatic
-    fun stopHosting(terminate: Boolean = false) {
+    fun stopHosting() {
         signalListenJob?.cancel()
         signalListenJob = null
         pendingJoinRequests.values.forEach { it.timeoutJob.cancel() }
         pendingJoinRequests.clear()
-        activeSessions.values.forEach { it.close(terminate) }
+        val sessionsToClose = activeSessions.values.toList()
         activeSessions.clear()
+        sessionsToClose.forEach { it.close() }
         pendingTurnConfigs.clear()
         currentRoomId = null
     }

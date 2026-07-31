@@ -20,23 +20,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(Minecraft.class)
 public class MinecraftDisconnectedMixin {
 
-    @Inject(method = "exitWorldAndClose", at = @At("HEAD"))
+    @Inject(method = "exitWorldAndClose", at = @At("RETURN"))
     private void peerlink$resetWebRTConSetScreen(CallbackInfo ci) {
-        WebRTCClientManager.reset();
-        WebRTCHostManager.stopHosting(false);
-    }
-
-    @Inject(method = "stop", at = @At("HEAD"))
-    private void peerlink$injectStop(CallbackInfo ci) {
-        WebRTCClientManager.reset();
-        WebRTCHostManager.stopHosting(true);
-    }
-
-    @Inject(method = "disconnect(Lnet/minecraft/client/gui/screens/Screen;Z)V", at = @At("HEAD"))
-    private void peerlink$resetWebRTConDisconnected(Screen screen, boolean keepResourcePacks, CallbackInfo ci) {
-        if (screen instanceof TitleScreen || screen == null) {
-            WebRTCClientManager.reset();
-            WebRTCHostManager.stopHosting(false);
-        }
+        WebRTCClientManager.cancelAll();
+        WebRTCHostManager.stopHosting();
     }
 }

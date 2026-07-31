@@ -8,8 +8,8 @@
 package cn.rtast.peerlink.client
 
 import cn.rtast.peerlink.client.gui.SignalingStatusIndicator
-import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.readConfig
+import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
 import net.fabricmc.api.ModInitializer
@@ -23,7 +23,8 @@ class PeerLinkEntrypoint : ModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ ->
             RpcManager.stop()
             WebRTCHostManager.stopHosting()
-            WebRTCClientManager.reset()
+            WebRTCClientManager.cancelAll()
+            plScope.cancelAll()
         }
     }
 }

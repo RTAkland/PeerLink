@@ -25,7 +25,7 @@ import kotlin.uuid.toKotlinUuid
 class WebRTCClient(
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
-    private val onStatusChanged: (RTCDataChannel) -> Unit,
+    private val onStatusChanged: (RTCPeerConnection, RTCDataChannel) -> Unit,
 ) {
     private var peerFactory: PeerConnectionFactory? = null
     private var peerConnection: RTCPeerConnection? = null
@@ -104,7 +104,7 @@ class WebRTCClient(
 
             val dataChannelInit = RTCDataChannelInit().apply { ordered = true }
             dataChannel = peerConnection!!.createDataChannel("minecraft-peerlink-channel", dataChannelInit)
-            setupDataChannelObserver(dataChannel!!)
+            setupDataChannelObserver(peerConnection!!, dataChannel!!)
             peerConnection!!.createOffer(RTCOfferOptions(), object : CreateSessionDescriptionObserver {
                 override fun onSuccess(description: RTCSessionDescription) {
                     peerConnection?.setLocalDescription(description, object : SetSessionDescriptionObserver {
@@ -199,7 +199,7 @@ class WebRTCClient(
         }
     }
 
-    private fun setupDataChannelObserver(dataChannel: RTCDataChannel) {
+    private fun setupDataChannelObserver(peerConnection: RTCPeerConnection, dataChannel: RTCDataChannel) {
         dataChannel.registerObserver(object : RTCDataChannelObserver {
             override fun onBufferedAmountChange(previousAmount: Long) {}
             override fun onMessage(buffer: RTCDataChannelBuffer) {}
@@ -212,7 +212,7 @@ class WebRTCClient(
                             Component.translatable("peerlink.p2p.success"),
                             Component.translatable("peerlink.p2p.joining")
                         )
-                        onStatusChanged(dataChannel)
+                        onStatusChanged(peerConnection, dataChannel)
                     }
 
                     RTCDataChannelState.CLOSED -> {

@@ -5,22 +5,28 @@
  */
 
 
+@file:OptIn(ExperimentalAtomicApi::class)
+
 package cn.rtast.peerlink.client.webrtc.host
 
 import cn.rtast.peerlink.client.minecraft
+import cn.rtast.peerlink.client.mixin.ClientConnectionAccessor
+import cn.rtast.peerlink.client.util.network.ConnectionInjector
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
 import cn.rtast.peerlink.client.util.rpc.serializeCandidate
+import cn.rtast.peerlink.client.webrtc.WebRTCChannel
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import dev.kastle.webrtc.*
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlin.time.Duration.Companion.milliseconds
+import net.minecraft.network.protocol.PacketFlow
+import net.minecraft.network.protocol.handshake.HandshakeProtocols
+import net.minecraft.server.network.ServerHandshakePacketListenerImpl
+import kotlin.concurrent.atomics.AtomicBoolean
+import kotlin.concurrent.atomics.ExperimentalAtomicApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
@@ -29,14 +35,16 @@ class WebRTCHostSession(
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
     private val iceConfig: TurnCredentials,
-    private val onClientConnected: (RTCDataChannel) -> Unit,
 ) {
-    private val peerFactory: PeerConnectionFactory = PeerConnectionFactory()
-    private var peerConnection: RTCPeerConnection? = null
+    companion object {
+        val sharedPeerFactory by lazy { PeerConnectionFactory() }
+    }
 
+    private var peerConnection: RTCPeerConnection? = null
     private val pendingCandidates = mutableListOf<RTCIceCandidate>()
     private var isRemoteSdpSet = false
     private var dataChannel: RTCDataChannel? = null
+    private val isClosed = AtomicBoolean(false)
 
     fun handleOfferAndCreateAnswer(sdpOffer: String) {
         val rtcConfig = RTCConfiguration().apply {
@@ -50,25 +58,27 @@ class WebRTCHostSession(
             iceServers.add(turnServer)
         }
 
-        peerConnection = peerFactory.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
+        peerConnection = sharedPeerFactory.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
             override fun onIceCandidate(candidate: RTCIceCandidate) {
                 scope.launch {
-                    val candidateJson = serializeCandidate(candidate)
-                    signalingService.sendSignal(
-                        clientPlayerUuid,
-                        SignalingMessage(
-                            senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
-                            targetPlayerUuid = clientPlayerUuid,
-                            type = SignalingMessage.SignalingType.ICE,
-                            payload = candidateJson
+                    runCatching {
+                        val candidateJson = serializeCandidate(candidate)
+                        signalingService.sendSignal(
+                            clientPlayerUuid,
+                            SignalingMessage(
+                                senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
+                                targetPlayerUuid = clientPlayerUuid,
+                                type = SignalingMessage.SignalingType.ICE,
+                                payload = candidateJson
+                            )
                         )
-                    )
+                    }
                 }
             }
 
             override fun onDataChannel(dataChannel: RTCDataChannel) {
                 if (dataChannel.state == RTCDataChannelState.OPEN) {
-                    onClientConnected(dataChannel)
+                    onClientConnected(peerConnection, dataChannel)
                 } else {
                     dataChannel.registerObserver(object : RTCDataChannelObserver {
                         override fun onBufferedAmountChange(previousAmount: Long) {}
@@ -76,7 +86,7 @@ class WebRTCHostSession(
                         override fun onStateChange() {
                             if (dataChannel.state == RTCDataChannelState.OPEN) {
                                 this@WebRTCHostSession.dataChannel = dataChannel
-                                onClientConnected(dataChannel)
+                                onClientConnected(peerConnection, dataChannel)
                             }
                         }
                     })
@@ -84,7 +94,9 @@ class WebRTCHostSession(
             }
 
             override fun onIceConnectionChange(state: RTCIceConnectionState) {
-                if (state == RTCIceConnectionState.DISCONNECTED || state == RTCIceConnectionState.FAILED) close()
+                if (state == RTCIceConnectionState.DISCONNECTED || state == RTCIceConnectionState.FAILED) {
+                    WebRTCHostManager.removeSession(clientPlayerUuid)
+                }
             }
 
             override fun onStandardizedIceConnectionChange(newState: RTCIceConnectionState) {}
@@ -92,7 +104,7 @@ class WebRTCHostSession(
         })
 
         val remoteOffer = RTCSessionDescription(RTCSdpType.OFFER, sdpOffer)
-        peerConnection!!.setRemoteDescription(remoteOffer, object : SetSessionDescriptionObserver {
+        peerConnection?.setRemoteDescription(remoteOffer, object : SetSessionDescriptionObserver {
             override fun onSuccess() {
                 isRemoteSdpSet = true
                 drainPendingCandidates()
@@ -107,8 +119,12 @@ class WebRTCHostSession(
 
     fun handleRemoteCandidate(candidateJson: String) {
         val candidate = deserializeCandidate(candidateJson)
-        if (isRemoteSdpSet) peerConnection?.addIceCandidate(candidate) else synchronized(pendingCandidates) {
-            pendingCandidates.add(candidate)
+        if (isRemoteSdpSet) {
+            peerConnection?.addIceCandidate(candidate)
+        } else {
+            synchronized(pendingCandidates) {
+                pendingCandidates.add(candidate)
+            }
         }
     }
 
@@ -119,28 +135,14 @@ class WebRTCHostSession(
         }
     }
 
-    fun close(terminate: Boolean = false) {
-        try {
-            if (terminate) scope.cancel()
-            val conn = peerConnection
+    fun close() {
+        if (!isClosed.compareAndSet(expectedValue = false, newValue = true)) return
+        runCatching {
+            dataChannel?.close()
+            dataChannel?.dispose()
+            dataChannel = null
+            peerConnection?.close()
             peerConnection = null
-            try {
-                conn?.close()
-            this@WebRTCHostSession.dataChannel?.close()
-            this@WebRTCHostSession.dataChannel?.dispose()
-            } catch (_: Throwable) {
-            }
-            scope.launch(Dispatchers.IO) {
-                try {
-                    delay(200.milliseconds)
-                    System.gc()
-                    peerFactory.dispose()
-                } catch (_: Throwable) {
-                }
-            }
-        } catch (_: Throwable) {
-        } finally {
-            WebRTCHostManager.removeSession(clientPlayerUuid)
         }
     }
 
@@ -150,15 +152,17 @@ class WebRTCHostSession(
                 peerConnection?.setLocalDescription(description, object : SetSessionDescriptionObserver {
                     override fun onSuccess() {
                         scope.launch {
-                            signalingService.sendSignal(
-                                clientPlayerUuid,
-                                SignalingMessage(
-                                    senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
-                                    targetPlayerUuid = clientPlayerUuid,
-                                    type = SignalingMessage.SignalingType.Answer,
-                                    payload = description.sdp
+                            runCatching {
+                                signalingService.sendSignal(
+                                    clientPlayerUuid,
+                                    SignalingMessage(
+                                        senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
+                                        targetPlayerUuid = clientPlayerUuid,
+                                        type = SignalingMessage.SignalingType.Answer,
+                                        payload = description.sdp
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
 
@@ -172,5 +176,24 @@ class WebRTCHostSession(
                 RpcManager.rpcLogger.error("CreateAnswer 失败: $error")
             }
         })
+    }
+
+    private fun onClientConnected(peerConnection: RTCPeerConnection?, dataChannel: RTCDataChannel) {
+        val server = minecraft.singleplayerServer ?: return
+        server.execute {
+            try {
+                val rtcChannel = WebRTCChannel(peerConnection!!, dataChannel)
+                val connection = ConnectionInjector.fromChannel(
+                    rtcChannel, PacketFlow.SERVERBOUND, null
+                )
+                (connection as ClientConnectionAccessor).`peerlink$setChannel`(rtcChannel)
+                connection.setupInboundProtocol(
+                    HandshakeProtocols.SERVERBOUND,
+                    ServerHandshakePacketListenerImpl(server, connection)
+                )
+                server.connection.connections.add(connection)
+            } catch (_: Exception) {
+            }
+        }
     }
 }

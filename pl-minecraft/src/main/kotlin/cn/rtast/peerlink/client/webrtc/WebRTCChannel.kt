@@ -7,10 +7,7 @@
 
 package cn.rtast.peerlink.client.webrtc
 
-import dev.kastle.webrtc.RTCDataChannel
-import dev.kastle.webrtc.RTCDataChannelBuffer
-import dev.kastle.webrtc.RTCDataChannelObserver
-import dev.kastle.webrtc.RTCDataChannelState
+import dev.kastle.webrtc.*
 import io.netty.buffer.ByteBuf
 import io.netty.buffer.Unpooled
 import io.netty.channel.*
@@ -19,14 +16,15 @@ import java.net.InetSocketAddress
 import java.net.SocketAddress
 import java.nio.ByteBuffer
 
-class WebRTCChannel(private val dataChannel: RTCDataChannel) : AbstractChannel(null) {
-
+class WebRTCChannel(
+    private val peerConnection: RTCPeerConnection,
+    private val dataChannel: RTCDataChannel,
+) : AbstractChannel(null) {
     companion object {
         private val METADATA = ChannelMetadata(false)
         private const val MAX_CHUNK_SIZE = 262144
         private const val HIGH_WATER_MARK = 1048576L
         private const val BACKPRESSURE_FLAG = 1
-
         private val LOCAL_ADDRESS = InetSocketAddress(InetAddress.getLoopbackAddress(), 0)
         private val REMOTE_ADDRESS = InetSocketAddress(InetAddress.getLoopbackAddress(), 0)
     }
@@ -74,11 +72,10 @@ class WebRTCChannel(private val dataChannel: RTCDataChannel) : AbstractChannel(n
     override fun doClose() {
         if (closed) return
         closed = true
-        try {
-            dataChannel.unregisterObserver()
-            dataChannel.close()
-        } catch (_: RuntimeException) {
-        }
+        runCatching { dataChannel.unregisterObserver() }
+        runCatching { dataChannel.close() }
+        runCatching { dataChannel.dispose() }
+        runCatching { peerConnection.close() }
     }
 
     override fun doBeginRead() {}
@@ -156,7 +153,7 @@ class WebRTCChannel(private val dataChannel: RTCDataChannel) : AbstractChannel(n
                 if (closed) return@execute
                 try {
                     handleStateChange(dataChannel.state)
-                } catch (_: RuntimeException) {
+                } catch (e: RuntimeException) {
                     closeFromTransport()
                 }
             }

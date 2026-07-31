@@ -7,8 +7,7 @@
 package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.data.JoinResult
-import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
-import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager.cancelAll
+import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
@@ -76,16 +75,16 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
-                    { cancelAll(); this.updateSelectButtonStatus() }
+                    { WebRTCClientManager.cancelAll(); this.updateSelectButtonStatus() }
                 ) { screen ->
-                    WebRTCJoinManager.joinRoom(roomId) { result ->
+                    WebRTCClientManager.joinRoom(roomId) { result ->
                         when (result) {
                             JoinResult.PendingJoinRequest -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
                             JoinResult.RejectJoin -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
                             JoinResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
                             JoinResult.InvalidRoomId -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
                             JoinResult.JoinRequestIntentFailed -> screen.updateTitle(Component.translatable("peerlink.signalSentFailed"))
-                            JoinResult.P2PInitializationFailed -> screen.updateTitle(Component.translatable("peerlink.joinGameFailed"))
+                            JoinResult.SignalingServerNotConnected -> screen.updateTitle(Component.translatable("peerlink.signalingServerNotConnected"))
                         }
                     }
                 }
@@ -94,12 +93,6 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
             this.updateSelectButtonStatus()
             throw e
         }
-    }
-
-    private fun handleTerminalError() {
-        cancelAll()
-        this.updateSelectButtonStatus()
-        minecraft.gui.setScreen(this)
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {

@@ -24,5 +24,18 @@
   "peerlink.roomIdResult": "房间创建成功",
   "peerlink.roomCreateFailed": "房间创建失败",
   "peerlink.p2p.initialFailed": "P2P 初始化失败",
-  "peerlink.signaling.waitingResponse": "等待信令服务器响应中"
+  "peerlink.signaling.waitingResponse": "等待信令服务器响应中",
+  "peerlink.pendingJoinRequests": "未决的加入请求",
+  "peerlink.accept": "同意",
+  "peerlink.reject": "拒绝",
+  "peerlink.noPendingRequests": "没有未决的加入请求",
+  "peerlink.hostManagement": "房间成员管理",
+  "peerlink.noConnectedPlayers": "没有已加入的玩家",
+  "peerlink.kick": "踢出玩家",
+  "peerlink.opStatus": "管理员状态",
+  "peerlink.operator": "管理员",
+  "peerlink.guest": "普通玩家",
+  "peerlink.waitingForHostApproval": "等待房主响应进房请求...",
+  "peerlink.hostRejectedJoinRequest": "房主拒绝了你的进房请求",
+  "peerlink.signalSentFailed": "向信令服务器发送进房请求失败"
 }

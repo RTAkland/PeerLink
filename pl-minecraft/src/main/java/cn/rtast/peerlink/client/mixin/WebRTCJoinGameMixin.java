@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.mixin;
 
-import cn.rtast.peerlink.client.util.network.ConnectionUtil;
+import cn.rtast.peerlink.client.util.network.ConnectionInjector;
 import cn.rtast.peerlink.client.webrtc.WebRTCChannel;
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCClientManager;
 import dev.kastle.webrtc.RTCDataChannel;
@@ -41,7 +41,7 @@ public class WebRTCJoinGameMixin {
     @Inject(method = "connect", at = @At("HEAD"), cancellable = true)
     private void overrideConnect(Minecraft minecraft, ServerAddress hostAndPort, ServerData server, TransferState transferState, CallbackInfo ci) {
         String host = hostAndPort.getHost();
-        if (host.endsWith(".peerlink-vitural-host")) {
+        if (host.endsWith(".peerlink-virtual-host")) {
             ci.cancel();
             Thread peerLinkThread = new Thread(() -> {
                 try {
@@ -53,7 +53,7 @@ public class WebRTCJoinGameMixin {
                                 minecraft.disconnectWithProgressScreen(false);
                             }
                             assert activeDataChannel != null;
-                            Connection virtualRtcConnection = ConnectionUtil.fromChannel(
+                            Connection virtualRtcConnection = ConnectionInjector.fromChannel(
                                     new WebRTCChannel(activeDataChannel),
                                     PacketFlow.CLIENTBOUND,
                                     minecraft.getDebugOverlay().getBandwidthLogger()

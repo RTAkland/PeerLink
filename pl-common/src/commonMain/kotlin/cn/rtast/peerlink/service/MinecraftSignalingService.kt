@@ -7,6 +7,8 @@
 
 package cn.rtast.peerlink.service
 
+import cn.rtast.peerlink.data.play.JoinResponse
+import cn.rtast.peerlink.data.play.PeerIntent
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
@@ -18,9 +20,14 @@ import kotlin.uuid.Uuid
 @Rpc
 interface MinecraftSignalingService {
     /**
-     * 监听服务端事件
+     * 监听信令事件流
      */
     fun observeEvents(): Flow<SignalEvent>
+
+    /**
+     * 发送心跳包
+     */
+    suspend fun sendHeartbeat(clientTimestamp: Long): Long
 
     /**
      * 创建房间
@@ -28,9 +35,14 @@ interface MinecraftSignalingService {
     suspend fun createRoom(): RoomState
 
     /**
-     * 加入房间
+     * 发送进房请求
      */
-    suspend fun joinRoom(roomId: String): RoomState?
+    suspend fun joinRoom(roomId: String): JoinResponse
+
+    /**
+     * 响应进房请求
+     */
+    suspend fun respondJoinRequest(applicantId: Uuid, accept: Boolean, reason: String? = null)
 
     /**
      * 离开房间
@@ -38,12 +50,17 @@ interface MinecraftSignalingService {
     suspend fun leaveRoom()
 
     /**
+     * 踢出玩家
+     */
+    suspend fun kickPlayer(targetPlayerId: Uuid, reason: String? = null)
+
+    /**
      * 发送信令
      */
     suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage)
 
     /**
-     * 心跳包
+     * 获取房间信息
      */
-    suspend fun sendHeartbeat(clientTimestamp: Long = Clock.System.now().toEpochMilliseconds()): Long
+    suspend fun getRoomState(): RoomState
 }

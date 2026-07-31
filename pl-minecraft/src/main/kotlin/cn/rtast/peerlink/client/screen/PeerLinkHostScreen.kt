@@ -89,7 +89,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     this.updateApplyChangesActiveState()
                 }
         )
-        this.allowCommands = singleplayerServer.commandsAllowedForOtherPlayers()
+//        this.allowCommands = singleplayerServer.commandsAllowedForOtherPlayers()
         this.initialAllowCommands = this.allowCommands
         val allowCommandsButton = otherPlayerSettings.addChild(
             CycleButton.onOffBuilder(this.allowCommands).create(
@@ -118,7 +118,6 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     WebRTCHostManager.openWebRTCRoom(
                         RpcManager.scope,
                         RpcManager.minecraftSignalingService!!,
-                        RpcManager.serverSignalingService!!,
                         onlineMode, allowCommands, gameMode
                     ) { result ->
                         result.onSuccess {
@@ -151,7 +150,6 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 updateRoomId(currentRoomId, false)
             }
         }.build()
-
         this.applyChangesButton?.active = false
         footer.addChild(this.applyChangesButton!!)
         footer.addChild(Button.builder(CommonComponents.GUI_CANCEL) { this.onClose() }.build())

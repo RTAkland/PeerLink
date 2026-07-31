@@ -19,7 +19,7 @@ import java.net.InetAddress
 import java.net.InetSocketAddress
 
 
-object ConnectionUtil {
+object ConnectionInjector {
     private val fallbackSocketAddress = InetSocketAddress(InetAddress.getLoopbackAddress(), 0)
     private val eventExecutors = MultiThreadIoEventLoopGroup(1, NioIoHandler.newFactory())
 

@@ -6,10 +6,12 @@
 
 package cn.rtast.peerlink.client.webrtc.guest
 
+import cn.rtast.peerlink.client.data.JoinResult
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.util.rpc.RpcManager
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.client.webrtc.host.WebRTCHostManager
+import cn.rtast.peerlink.data.play.JoinResponse
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import kotlinx.coroutines.Job
@@ -22,55 +24,90 @@ import net.minecraft.network.chat.Component
 object WebRTCJoinManager {
     private var currentClient: WebRTCClient? = null
     private var observeJob: Job? = null
-    fun joinRoom(roomId: String, onResult: (Boolean) -> Unit) {
+
+    fun joinRoom(roomId: String, onResult: (JoinResult) -> Unit) {
+        cancelAll()
+
         if (!preCheck()) {
-            onResult(false)
+            onResult(JoinResult.P2PInitializationFailed)
             return
         }
         val signalingService = RpcManager.minecraftSignalingService ?: run {
-            onResult(false)
-            return
-        }
-        val serverSignalingService = RpcManager.serverSignalingService ?: run {
-            onResult(false)
+            onResult(JoinResult.P2PInitializationFailed)
             return
         }
         val parentScreen = minecraft.gui.screen()!!
 
-        observeJob?.cancel()
+        val client = WebRTCClient(
+            scope = RpcManager.scope,
+            signalingService = signalingService
+        ) { channel ->
+            WebRTCClientManager.setupWebRtcSession(channel)
+            minecraft.execute {
+                ConnectScreen.startConnecting(
+                    parentScreen,
+                    minecraft,
+                    ServerAddress("$roomId.peerlink-virtual-host", 0),
+                    ServerData("PeerLink", "peer-link", ServerData.Type.LAN),
+                    false, null
+                )
+            }
+        }
+        currentClient = client
+
         observeJob = RpcManager.scope.launch {
-            signalingService.observeEvents().collect { event ->
-                if (event is SignalEvent.SignalingReceived) {
-                    when (event.message.type) {
-                        SignalingMessage.SignalingType.Answer -> currentClient?.handleRemoteAnswer(event.message.payload)
-                        SignalingMessage.SignalingType.ICE -> currentClient?.handleRemoteCandidate(event.message.payload)
+            launch {
+                signalingService.observeEvents().collect { event ->
+                    when (event) {
+                        is SignalEvent.MessageReceived -> {
+                            when (event.message.type) {
+                                SignalingMessage.SignalingType.Answer -> currentClient?.handleRemoteAnswer(event.message.payload)
+                                SignalingMessage.SignalingType.ICE -> currentClient?.handleRemoteCandidate(event.message.payload)
+                                else -> {}
+                            }
+                        }
+
+                        is SignalEvent.PlayerKicked -> {
+                            showNotification(
+                                Component.translatable("peerlink.p2p.failed"),
+                                Component.literal(event.reason ?: "Kicked from room by host.")
+                            )
+                            cancelAll()
+                        }
+
                         else -> {}
                     }
                 }
             }
-        }
+            minecraft.execute { onResult(JoinResult.PendingJoinRequest) }
+            val response = try {
+                signalingService.joinRoom(roomId)
+            } catch (e: Exception) {
+                JoinResponse.Error(e.message ?: "RPC network error")
+            }
+            minecraft.execute {
+                when (response) {
+                    is JoinResponse.Accepted -> {
+                        onResult(JoinResult.Accepted)
+                        currentClient?.startP2PConnect(response.hostId, response.credentials)
+                    }
 
-        RpcManager.scope.launch {
-            currentClient = WebRTCClient(
-                scope = RpcManager.scope,
-                signalingService = signalingService,
-                serverSignalingService = serverSignalingService,
-                roomId = roomId
-            ) { channel ->
-                WebRTCClientManager.setupWebRtcSession(channel)
-                minecraft.execute {
-                    ConnectScreen.startConnecting(
-                        parentScreen,
-                        minecraft,
-                        ServerAddress("$roomId.peerlink-vitural-host", 0),
-                        ServerData("PeerLink", "peer-link", ServerData.Type.LAN),
-                        false, null
-                    )
+                    is JoinResponse.Rejected -> {
+                        onResult(JoinResult.RejectJoin)
+                        cancelAll()
+                    }
+
+                    is JoinResponse.Error -> {
+                        onResult(JoinResult.InvalidRoomId)
+                        cancelAll()
+                    }
+
+                    JoinResponse.InvalidRoom -> {
+                        onResult(JoinResult.InvalidRoomId)
+                        cancelAll()
+                    }
                 }
             }
-
-            val success = currentClient?.startConnect() ?: false
-            minecraft.execute { onResult(success) }
         }
     }
 

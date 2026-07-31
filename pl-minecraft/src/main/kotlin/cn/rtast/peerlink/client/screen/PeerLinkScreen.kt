@@ -4,9 +4,9 @@
  * Date: 2026/7/28
  */
 
-
 package cn.rtast.peerlink.client.screen
 
+import cn.rtast.peerlink.client.data.JoinResult
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager
 import cn.rtast.peerlink.client.webrtc.guest.WebRTCJoinManager.cancelAll
 import net.minecraft.client.gui.GuiGraphicsExtractor
@@ -69,19 +69,37 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     private fun joinRoom() {
+        val roomId = roomIdEdit!!.value.trim()
+        if (roomId.isBlank()) return
+
         this.selectButton?.active = false
+
         try {
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
                     { cancelAll(); this.updateSelectButtonStatus() }
                 ) { screen ->
-                    WebRTCJoinManager.joinRoom(roomIdEdit!!.value) { result ->
-                        if (!result) {
-                            cancelAll()
-                            screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                            this.updateSelectButtonStatus()
-                        } else screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                    WebRTCJoinManager.joinRoom(roomId) { result ->
+                        when (result) {
+                            JoinResult.PendingJoinRequest -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
+                            JoinResult.RejectJoin -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
+                            JoinResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                            JoinResult.InvalidRoomId -> {
+                                screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                                handleTerminalError()
+                            }
+
+                            JoinResult.JoinRequestIntentFailed -> {
+                                screen.updateTitle(Component.translatable("peerlink.signalSentFailed"))
+                                handleTerminalError()
+                            }
+
+                            JoinResult.P2PInitializationFailed -> {
+                                screen.updateTitle(Component.translatable("peerlink.joinGameFailed"))
+                                handleTerminalError()
+                            }
+                        }
                     }
                 }
             )
@@ -89,6 +107,12 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
             this.updateSelectButtonStatus()
             throw e
         }
+    }
+
+    private fun handleTerminalError() {
+        cancelAll()
+        this.updateSelectButtonStatus()
+        minecraft.gui.setScreen(this)
     }
 
     override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {

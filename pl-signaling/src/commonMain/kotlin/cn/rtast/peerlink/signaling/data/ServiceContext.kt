@@ -18,7 +18,7 @@ class ServiceContext(val attributes: Attributes = Attributes(true)) {
     fun bindPlayer(player: PlayerInfo) {
         if (attributes.contains(PLAYER_KEY)) {
             val existing = attributes[PLAYER_KEY]
-            throw IllegalStateException("Already registered identity: ${existing.username}")
+            throw IllegalStateException("Already registered identity: ${existing.name}")
         }
         attributes.put(PLAYER_KEY, player)
     }

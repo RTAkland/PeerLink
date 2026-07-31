@@ -19,6 +19,7 @@ kotlin {
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.io)
+            implementation(libs.rethis)
         }
 
         linuxX64Main.dependencies {

@@ -25,6 +25,7 @@ object RpcManager {
     var isConnected = false
         private set
 
+    @JvmStatic
     var minecraftSignalingService: MinecraftSignalingService? = null
         private set
     var serverSignalingService: ServerSignalingService? = null

@@ -24,5 +24,18 @@
   "peerlink.roomIdResult": "Room created",
   "peerlink.roomCreateFailed": "Failed to Create Room",
   "peerlink.p2p.initialFailed": "P2P Initialization Failed",
-  "peerlink.signaling.waitingResponse": "Waiting Response from Signaling Server"
+  "peerlink.signaling.waitingResponse": "Waiting Response from Signaling Server",
+  "peerlink.pendingJoinRequests": "Pending Join Requests",
+  "peerlink.accept": "Accept",
+  "peerlink.reject": "Reject",
+  "peerlink.noPendingRequests": "No Pending Join Request(s)",
+  "peerlink.hostManagement": "Room Management",
+  "peerlink.noConnectedPlayers": "No Connected Players",
+  "peerlink.kick": "Kick Player",
+  "peerlink.opStatus": "OP Status",
+  "peerlink.operator": "Operator",
+  "peerlink.guest": "Guest",
+  "peerlink.waitingForHostApproval": "Waiting for host approval...",
+  "peerlink.hostRejectedJoinRequest": "Join request was rejected by the host",
+  "peerlink.signalSentFailed": "Failed to send join intent to signaling server"
 }

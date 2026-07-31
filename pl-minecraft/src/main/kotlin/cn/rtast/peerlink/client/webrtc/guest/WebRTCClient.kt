@@ -12,46 +12,42 @@ import cn.rtast.peerlink.client.util.rpc.deserializeCandidate
 import cn.rtast.peerlink.client.util.rpc.serializeCandidate
 import cn.rtast.peerlink.client.util.showNotification
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
-import cn.rtast.peerlink.service.ServerSignalingService
 import dev.kastle.webrtc.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import net.minecraft.network.chat.Component
 import java.util.concurrent.ConcurrentLinkedQueue
+import kotlin.uuid.Uuid
 import kotlin.uuid.toKotlinUuid
 
 class WebRTCClient(
     private val scope: CoroutineScope,
     private val signalingService: MinecraftSignalingService,
-    private val serverSignalingService: ServerSignalingService,
-    private val roomId: String,
     private val onStatusChanged: (RTCDataChannel) -> Unit,
 ) {
     private var peerFactory: PeerConnectionFactory? = null
     private var peerConnection: RTCPeerConnection? = null
     private var dataChannel: RTCDataChannel? = null
+    private var hostPlayerUuid: Uuid? = null
 
     @Volatile
     private var isRemoteDescriptionSet = false
     private val pendingCandidates = ConcurrentLinkedQueue<RTCIceCandidate>()
 
-    suspend fun startConnect(): Boolean {
+    fun startP2PConnect(hostUuid: Uuid, turnCredentials: TurnCredentials) {
+        this.hostPlayerUuid = hostUuid
         try {
             peerFactory = PeerConnectionFactory()
-            val iceConfig = serverSignalingService.acquireICEServerConfig()
-            val roomState = signalingService.joinRoom(roomId) ?: return false
-
             val rtcConfig = RTCConfiguration().apply {
-                val stunServer = RTCIceServer().apply {
-                    urls.addAll(iceConfig.stunServers.map { if (it.startsWith("stun:")) it else "stun:$it" })
-                }
-                val turnServer = RTCIceServer().apply {
-                    urls.addAll(iceConfig.turnServers.map { if (it.startsWith("turn:")) it else "turn:$it" })
-                    iceConfig.username.let { username = it }
-                    iceConfig.password.let { password = it }
-                }
+                val stunServer = RTCIceServer().apply { urls.addAll(turnCredentials.stunServers) }
                 iceServers.add(stunServer)
+                val turnServer = RTCIceServer().apply {
+                    urls.addAll(turnCredentials.turnServers)
+                    username = turnCredentials.username
+                    password = turnCredentials.password
+                }
                 iceServers.add(turnServer)
             }
 
@@ -60,10 +56,10 @@ class WebRTCClient(
                     scope.launch {
                         val candidateJson = serializeCandidate(candidate)
                         signalingService.sendSignal(
-                            roomState.hostPlayerUuid,
+                            hostUuid,
                             SignalingMessage(
                                 senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
-                                targetPlayerUuid = roomState.hostPlayerUuid,
+                                targetPlayerUuid = hostUuid,
                                 type = SignalingMessage.SignalingType.ICE,
                                 payload = candidateJson
                             )
@@ -115,10 +111,10 @@ class WebRTCClient(
                         override fun onSuccess() {
                             scope.launch {
                                 signalingService.sendSignal(
-                                    roomState.hostPlayerUuid,
+                                    hostUuid,
                                     SignalingMessage(
                                         senderPlayerUuid = minecraft.gameProfile.id.toKotlinUuid(),
-                                        targetPlayerUuid = roomState.hostPlayerUuid,
+                                        targetPlayerUuid = hostUuid,
                                         type = SignalingMessage.SignalingType.Offer,
                                         payload = description.sdp
                                     )
@@ -140,7 +136,6 @@ class WebRTCClient(
             RpcManager.rpcLogger.error("WebRTC 启动失败: ${e.message}", e)
             close()
         }
-        return true
     }
 
     fun handleRemoteAnswer(sdpAnswer: String) {
@@ -158,8 +153,9 @@ class WebRTCClient(
         pc.setRemoteDescription(sdp, object : SetSessionDescriptionObserver {
             override fun onSuccess() {
                 RpcManager.rpcLogger.info("[PeerLink Client] 成功设置 Remote Answer SDP")
-                isRemoteDescriptionSet = true
+
                 synchronized(pendingCandidates) {
+                    isRemoteDescriptionSet = true
                     while (pendingCandidates.isNotEmpty()) {
                         val candidate = pendingCandidates.poll() ?: break
                         pc.addIceCandidate(candidate)
@@ -175,20 +171,31 @@ class WebRTCClient(
 
     fun handleRemoteCandidate(candidateJson: String) {
         val candidate = deserializeCandidate(candidateJson)
-        if (isRemoteDescriptionSet) {
-            peerConnection?.addIceCandidate(candidate)
-        } else pendingCandidates.add(candidate)
+        synchronized(pendingCandidates) {
+            if (isRemoteDescriptionSet) {
+                peerConnection?.addIceCandidate(candidate)
+            } else {
+                pendingCandidates.add(candidate)
+            }
+        }
     }
 
     fun close() {
         try {
             dataChannel?.close()
+            dataChannel = null
             peerConnection?.close()
+            peerConnection = null
             peerFactory?.dispose()
-            pendingCandidates.clear()
-            isRemoteDescriptionSet = false
-            RpcManager.rpcLogger.info("WebRTC 连接已清理释放")
-        } catch (_: Exception) {
+            peerFactory = null
+            synchronized(pendingCandidates) {
+                pendingCandidates.clear()
+                isRemoteDescriptionSet = false
+            }
+            hostPlayerUuid = null
+            RpcManager.rpcLogger.info("WebRTC连接释放")
+        } catch (e: Exception) {
+            RpcManager.rpcLogger.error("清理WebRTC异常: ${e.message}")
         }
     }
 

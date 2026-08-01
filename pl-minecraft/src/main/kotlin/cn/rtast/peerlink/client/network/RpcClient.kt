@@ -90,7 +90,7 @@ class RpcClient(
                     authService!!.registerIdentity(currentPlayerInfo)
                     PeerLinkInitializer.manager?.initialize()
                     coroutineScope {
-                        startHeartbeatLoop(this)
+                        startHeartbeatLoop(this@coroutineScope)
                         awaitCancellation()
                     }
                 } catch (e: CancellationException) {
@@ -107,7 +107,6 @@ class RpcClient(
                     _latencyMs.value = -1L
                     runCatching { currentClient?.close() }
                     client = null
-
                     if (_connectionState.value != ConnectionState.DISPOSING) {
                         _connectionState.value = ConnectionState.DISCONNECTED
                     }

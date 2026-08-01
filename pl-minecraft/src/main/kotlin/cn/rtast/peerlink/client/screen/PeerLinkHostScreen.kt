@@ -45,6 +45,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
     private val roomIdButton = Button.builder(currentRoomIdComponent) {
         val roomId = currentRoomState?.roomId
+        println(roomId)
         if (roomId != null) {
             minecraft.keyboardHandler.clipboard = roomId
             showNotification(Component.translatable("peerlink.roomIdCopied"), null)
@@ -191,6 +192,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
                     this@PeerLinkHostScreen.initialAllowCommands = this@PeerLinkHostScreen.allowCommands
                     updateRoomId(PLACEHOLDER_ROOM_ID, false)
+                    currentRoomState = null
                     this@PeerLinkHostScreen.updateApplyChangesActiveState()
                 }
             }
@@ -222,7 +224,6 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     fun updateRoomId(roomIdComponent: Component, enabled: Boolean) {
-        currentRoomState = null
         roomIdButton.message = roomIdComponent
         roomIdButton.active = enabled
     }

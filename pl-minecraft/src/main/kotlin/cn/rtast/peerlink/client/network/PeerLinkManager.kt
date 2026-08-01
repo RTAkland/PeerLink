@@ -62,14 +62,23 @@ class PeerLinkManager(
     val pendingRequestsFlow = _pendingRequestsFlow.asStateFlow()
 
     suspend fun initialize() {
+        eventListenJob?.cancel()
+        withContext(Dispatchers.Default) { factory }
         eventListenJob = rpcClient.signalingService!!
             .observeEvents().onEach { event -> handleSignalingEvent(event) }.launchIn(scope)
+    }
+
+    fun destroy() {
+        pendingIceCandidates.values.forEach { it.clear() }
+        remoteDescriptionReadyMap.clear()
+        handshakes.forEach { it.value.abort("Aborted") }
+        pendingRequests.clear()
+        factory.dispose()
     }
 
     private fun handleSignalingEvent(event: SignalEvent) {
         when (event) {
             is SignalEvent.JoinRequested -> {
-                println("join request")
                 val applicantUuid = event.applicantId
                 val applicantName = event.applicantName
                 scope.launch {
@@ -163,19 +172,19 @@ class PeerLinkManager(
         _pendingRequestsFlow.value = pendingRequests.values.toList()
     }
 
-    suspend fun connect(
+    fun connect(
         roomId: String,
         onResult: (ConnectResult) -> Unit,
-    ) {
+    ) = scope.launch {
         val signaling = rpcClient.signalingService
         if (signaling == null) {
             onResult(ConnectResult.SignalingError)
-            return
+            return@launch
         }
         val roomState = signaling.getRoomStateById(roomId)
         if (roomState == null) {
             onResult(ConnectResult.Invalid)
-            return
+            return@launch
         }
 
         runCatching {
@@ -234,17 +243,16 @@ class PeerLinkManager(
         }
     }
 
-    private fun startJoin(result: RtcHandshake.HandshakeResult) = scope.launch {
+    private fun startJoin(result: RtcHandshake.HandshakeResult) {
         val rtcChannel = RtcChannel(result)
+        if (minecraft.level != null || minecraft.singleplayerServer != null)
+            minecraft.disconnectWithProgressScreen(false)
+        val connection = createConnection(
+            rtcChannel, PacketFlow.CLIENTBOUND,
+            minecraft.debugOverlay.bandwidthLogger
+        )
+        val serverData = ServerData("PeerLink", "peerlink-virtual-host", ServerData.Type.OTHER)
         minecraft.execute {
-            if (minecraft.level != null || minecraft.singleplayerServer != null)
-                minecraft.disconnectWithProgressScreen(false)
-            val connection = createConnection(
-                rtcChannel,
-                PacketFlow.CLIENTBOUND,
-                minecraft.debugOverlay.bandwidthLogger
-            )
-            val serverData = ServerData("PeerLink", "peerlink-virtual-host", ServerData.Type.OTHER)
             connection.initiateServerboundPlayConnection(
                 "peerlink-virtual-host", 0,
                 LoginProtocols.SERVERBOUND,

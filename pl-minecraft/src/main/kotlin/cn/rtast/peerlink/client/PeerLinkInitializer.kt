@@ -58,7 +58,7 @@ class PeerLinkInitializer : ModInitializer {
 
     fun shutdown() {
         scope.cancel()
-//        runCatching { manager?.destroy() }
+        runCatching { manager?.destroy() }
         runCatching { rpcClient?.destroy() }
         manager = null
         rpcClient = null

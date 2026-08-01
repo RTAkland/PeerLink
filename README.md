@@ -2,29 +2,36 @@
 
 A Minecraft multiplayer mod based on WebRTC.
 
+This feature is forked from Minecraft snapshot version `26.2-snapshot7`, and it has been removed.
+
 Supported Minecraft version `26.2`
 
-# Get started
+Pre-built Jars in Actions workflow
 
-Install `fabric api`, `fabric-language-kotlin` and `peerlink`.
+PeerLink does not have pre-built JARs for `windows-arm64` and `linux-arm32` platforms. If you wish to use PeerLink on
+these platforms, please build it from source.
 
-## Host
+Note: Building is required for the specific platform.
 
-Join a singleplayer world then press ESC, find `PeerLink Multiplayer` button.
+# Implement details
 
-## Guest
+PeerLink use itself signaling server to communicate with other PeerLink clients.
 
-Click `Multiplayer` button, there's a button in the top-right corner.
+Create a room to get a room ID, share it to your friends, they use room id to join your world.
 
-# Dev
+## NAT Traversal
 
-PeerLink require Java 25 to run, expect signaling server(Java 8).
+Direct P2P connectivity is used when NAT conditions permit, bypassing intermediate servers. For restricted networks,
+TURN servers act as relays to guarantee successful connections.
 
-# Signaling server
+## Signaling Servers
 
-`./gradlew :pl-signaling:linkReleaseExecutableLinuxX64`
+Available public signaling servers
 
-Output executable file → ``
+| Address                           | Comment                           | Provider                                      |
+|-----------------------------------|-----------------------------------|-----------------------------------------------|
+| wss://peer.7o.ink                 | Built-in default signaling server | [xiaoman1221](https://github.com/xiaoman1221) |
+| wss://peerlink-signaling.rtast.cn | Service server is unstable        | [RTAkland](https://github.com/RTAkland)       |
 
 # Open source
 

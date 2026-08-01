@@ -1,3 +1,6 @@
+@file:Suppress("AvoidDuplicateDependencies")
+
+import org.gradle.nativeplatform.platform.internal.DefaultNativePlatform
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -24,6 +27,8 @@ loom {
 }
 
 dependencies {
+    val platformClassifier = getTargetPlatformClassifier()
+
     minecraft(libs.minecraft)
     implementation(libs.fabric.loader)
     implementation(libs.fabric.api)
@@ -33,13 +38,13 @@ dependencies {
     implementation(libs.kotlinx.rpc.krpc.ktor.client)
     implementation(libs.ktor.client.cio)
     implementation(libs.webrtc.java.slim)
-    implementation(variantOf(libs.webrtc.java.slim) { classifier("windows-x86_64") })
+    implementation(variantOf(libs.webrtc.java.slim) { classifier(platformClassifier) })
 
     shadow(project(":pl-common"))
     shadow(libs.kotlinx.rpc.krpc.ktor.client)
     shadow(libs.ktor.client.cio)
     shadow(libs.webrtc.java.slim)
-    shadow(variantOf(libs.webrtc.java.slim) { classifier("windows-x86_64") })
+    shadow(variantOf(libs.webrtc.java.slim) { classifier(platformClassifier) })
 }
 
 tasks.processResources {
@@ -76,4 +81,23 @@ tasks.shadowJar {
     exclude("kotlinx/serialization/**")
     exclude("META-INF/*.kotlin_module")
     exclude("META-INF/kotlin/**")
+}
+
+fun getTargetPlatformClassifier(): String {
+    if (project.hasProperty("targetPlatform")) return project.property("targetPlatform").toString()
+    val os = DefaultNativePlatform.getCurrentOperatingSystem()
+    val arch = DefaultNativePlatform.getCurrentArchitecture()
+    val osName = when {
+        os.isWindows -> "windows"
+        os.isLinux -> "linux"
+        os.isMacOsX -> "macos"
+        else -> error("Unsupported Operating System: ${os.displayName}")
+    }
+    val archName = when {
+        arch.isAmd64 -> "x86_64"
+        arch.isArm64 -> "aarch64"
+        arch.isArm32 || arch.name.startsWith("armv7") || arch.name.startsWith("armv8_32") -> "aarch32"
+        else -> error("Unsupported Architecture: ${arch.name}")
+    }
+    return "$osName-$archName"
 }

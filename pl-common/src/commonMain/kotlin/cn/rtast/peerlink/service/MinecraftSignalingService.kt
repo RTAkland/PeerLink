@@ -11,6 +11,7 @@ import cn.rtast.peerlink.data.play.JoinResponse
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import kotlinx.coroutines.flow.Flow
 import kotlinx.rpc.annotations.Rpc
 import kotlin.uuid.Uuid
@@ -58,7 +59,17 @@ interface MinecraftSignalingService {
     suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage)
 
     /**
-     * 获取房间信息
+     * 获取当前房间信息
      */
     suspend fun getRoomState(): RoomState
+
+    /**
+     * 获取指定房间信息
+     */
+    suspend fun getRoomStateById(roomId: String): RoomState?
+
+    /**
+     * 获取TURN/STUN服务器凭证
+     */
+    suspend fun acquireTurnCredentials(): TurnCredentials
 }

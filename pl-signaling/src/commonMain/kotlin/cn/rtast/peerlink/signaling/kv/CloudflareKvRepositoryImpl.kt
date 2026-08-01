@@ -8,6 +8,7 @@
 package cn.rtast.peerlink.signaling.kv
 
 import cn.rtast.peerlink.data.play.PlayerInfo
+import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.signaling.httpClient
 import cn.rtast.peerlink.util.encodeJson
 import cn.rtast.peerlink.util.fromJson
@@ -60,6 +61,12 @@ class CloudflareKvRepositoryImpl(
         httpClient.delete("$baseUrl/values/$key") {
             header(HttpHeaders.Authorization, "Bearer $apiToken")
         }
+    }
+
+    override suspend fun getRoomState(roomId: String): RoomState? {
+        val hostId = getRoomHost(roomId) ?: return null
+        val players = getRoomPlayers(roomId)
+        return RoomState(roomId, hostId, players)
     }
 
     override suspend fun getRoomHost(roomId: String): Uuid? {

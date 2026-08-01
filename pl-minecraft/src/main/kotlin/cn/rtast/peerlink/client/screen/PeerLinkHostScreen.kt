@@ -4,12 +4,13 @@
  * Date: 2026/7/29
  */
 
-
 package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.PeerLinkInitializer
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
+import cn.rtast.peerlink.client.util.HostPlayerStorage
 import cn.rtast.peerlink.client.util.showNotification
+import cn.rtast.peerlink.data.play.RoomState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -23,16 +24,15 @@ import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.gui.screens.options.WorldOptionsScreen
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.server.MinecraftServer
 import net.minecraft.world.level.GameType
 
 class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translatable("peerlink.openToWebRTC")) {
     private val layout = HeaderAndFooterLayout(this)
-    private val currentRoomState get() = PeerLinkInitializer.manager?.currentRoomState
     private var peerLinkEnabled = currentRoomState != null
     private var initialPeerLinkEnabled = peerLinkEnabled
+
     private var onlineMode = true
-    private var initialOnlineMode = onlineMode
+    private var initialOnlineMode = true
     private var gameMode = GameType.SURVIVAL
     private var initialGameMode = GameType.SURVIVAL
     private var allowCommands = false
@@ -62,6 +62,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
         private val APPLY_CHANGES = Component.translatable("menu.multiplayerOptions.applyChanges")
         private val PLACEHOLDER_ROOM_ID = Component.translatable("peerlink.screen.host.roomIdPlaceholder")
         private val ONLINE_MODE = Component.translatable("peerlink.screen.host.onlineMode")
+        var currentRoomState: RoomState? = null
     }
 
     override fun init() {
@@ -70,6 +71,10 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             this.onClose()
             return
         }
+
+        this.onlineMode = singleplayerServer.usesAuthentication()
+        this.initialOnlineMode = this.onlineMode
+
         this.layout.addTitleHeader(this.title, this.font)
         val content = this.layout.addToContents(LinearLayout.vertical().spacing(8))
         content.defaultCellSetting().alignHorizontallyCenter()
@@ -129,6 +134,9 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             if (this.allowCommands != this.initialAllowCommands) {
                 singleplayerServer.setCommandsAllowedForOtherPlayers(this.allowCommands)
             }
+            if (this.onlineMode != this.initialOnlineMode) {
+                (singleplayerServer as MinecraftServerAccessor).`peerlink$setOnlineMode`(this.onlineMode)
+            }
             val manager = PeerLinkInitializer.manager
             val rpcClient = PeerLinkInitializer.rpcClient
             if (this.peerLinkEnabled) {
@@ -145,24 +153,20 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     showNotification(Component.translatable("peerlink.p2p.creatingRoom"), null)
                     screenScope.launch {
                         try {
-                            if (!singleplayerServer.isPublished) {
-                                singleplayerServer.publishServer(
-                                    MinecraftServer.MultiplayerScope.LAN,
-                                    gameMode, allowCommands, 0
-                                )
-                                (singleplayerServer as MinecraftServerAccessor).`peerlink$setOnlineMode`(onlineMode)
-                            }
-                            val roomState = manager!!.createRoom { roomEvent ->
-                                manager.addPendingRequest(roomEvent)
-                            }
-
-                            minecraft.execute {
-                                this@PeerLinkHostScreen.initialPeerLinkEnabled = this@PeerLinkHostScreen.peerLinkEnabled
-                                this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
-                                this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
-                                this@PeerLinkHostScreen.initialAllowCommands = this@PeerLinkHostScreen.allowCommands
-                                updateRoomId(Component.literal(roomState.roomId), true)
-                                this@PeerLinkHostScreen.updateApplyChangesActiveState()
+                            manager!!.host(
+                                singleplayerServer, gameMode, allowCommands, onlineMode
+                            ) {
+                                currentRoomState = it
+                                HostPlayerStorage.init()
+                                minecraft.execute {
+                                    this@PeerLinkHostScreen.initialPeerLinkEnabled =
+                                        this@PeerLinkHostScreen.peerLinkEnabled
+                                    this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
+                                    this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
+                                    this@PeerLinkHostScreen.initialAllowCommands = this@PeerLinkHostScreen.allowCommands
+                                    updateRoomId(Component.literal(it.roomId), true)
+                                    this@PeerLinkHostScreen.updateApplyChangesActiveState()
+                                }
                             }
                         } catch (e: Exception) {
                             minecraft.execute {
@@ -175,22 +179,19 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                         }
                     }
                 } else {
+                    this.initialOnlineMode = this.onlineMode
                     showNotification(Component.translatable("peerlink.p2p.alreadyHosting"), null)
                     this.updateApplyChangesActiveState()
                 }
             } else {
-                screenScope.launch {
-                    manager?.leaveAndCleanup()
-                    minecraft.execute {
-                        singleplayerServer.unpublishServer()
-                        this@PeerLinkHostScreen.initialPeerLinkEnabled = false
-                        this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
-                        this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
-                        this@PeerLinkHostScreen.initialAllowCommands = this@PeerLinkHostScreen.allowCommands
-
-                        updateRoomId(PLACEHOLDER_ROOM_ID, false)
-                        this@PeerLinkHostScreen.updateApplyChangesActiveState()
-                    }
+                minecraft.execute {
+                    singleplayerServer.unpublishServer()
+                    this@PeerLinkHostScreen.initialPeerLinkEnabled = false
+                    this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
+                    this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
+                    this@PeerLinkHostScreen.initialAllowCommands = this@PeerLinkHostScreen.allowCommands
+                    updateRoomId(PLACEHOLDER_ROOM_ID, false)
+                    this@PeerLinkHostScreen.updateApplyChangesActiveState()
                 }
             }
         }.build()
@@ -221,6 +222,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     fun updateRoomId(roomIdComponent: Component, enabled: Boolean) {
+        currentRoomState = null
         roomIdButton.message = roomIdComponent
         roomIdButton.active = enabled
     }

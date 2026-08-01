@@ -8,9 +8,11 @@
 package cn.rtast.peerlink.signaling.kv
 
 import cn.rtast.peerlink.data.play.PlayerInfo
+import cn.rtast.peerlink.data.play.RoomState
 import kotlin.uuid.Uuid
 
 interface CloudflareKvRepository {
+    suspend fun getRoomState(roomId: String): RoomState?
     suspend fun getRoomHost(roomId: String): Uuid?
     suspend fun setRoomHost(roomId: String, hostId: Uuid)
     suspend fun getPlayerRoom(playerId: Uuid): String?

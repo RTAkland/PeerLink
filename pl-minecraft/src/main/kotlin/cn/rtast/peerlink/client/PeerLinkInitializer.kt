@@ -51,15 +51,14 @@ class PeerLinkInitializer : ModInitializer {
     fun initRpcAndManager(signalingUrl: String) {
         val rpc = RpcClient(signalingUrl, scope)
         rpcClient = rpc
-        val localPlayer = PlayerInfo(minecraft.user.profileId.toKotlinUuid(), minecraft.user.name)
-        val peerLinkManager = PeerLinkManager(rpc, localPlayer, scope = scope)
+        val peerLinkManager = PeerLinkManager(rpc, scope = scope)
         manager = peerLinkManager
         rpc.start()
     }
 
     fun shutdown() {
         scope.cancel()
-        runCatching { manager?.destroy() }
+//        runCatching { manager?.destroy() }
         runCatching { rpcClient?.destroy() }
         manager = null
         rpcClient = null

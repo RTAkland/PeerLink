@@ -32,7 +32,7 @@ object HostPlayerStorage {
         playersMap.clear()
         val server = Minecraft.getInstance().singleplayerServer ?: return
         val worldDir = server.getWorldPath(LevelResource.ROOT)
-        storageFile = worldDir.resolve("peerlink_players.json").toFile()
+        storageFile = worldDir.resolve("peerlink-ops.json").toFile()
         load()
     }
 

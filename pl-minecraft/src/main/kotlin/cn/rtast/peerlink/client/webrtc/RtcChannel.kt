@@ -23,7 +23,7 @@ class RtcChannel(
 ) : AbstractChannel(null) {
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(RtcChannel::class.java)
+        private val logger = LoggerFactory.getLogger(RtcChannel::class.java)
         private val METADATA = ChannelMetadata(false)
 
         private const val MAX_CHUNK_SIZE = 262144
@@ -40,16 +40,15 @@ class RtcChannel(
 
         fun dispose(peerConnection: RTCPeerConnection, dataChannel: RTCDataChannel?) {
             dataChannel?.let { dc ->
-                runCatching { dc.unregisterObserver() }.onFailure { LOGGER.warn("unregisterObserver threw", it) }
-                runCatching { dc.close() }.onFailure { LOGGER.warn("dataChannel.close threw", it) }
-                runCatching { dc.dispose() }.onFailure { LOGGER.warn("dataChannel.dispose threw", it) }
+                runCatching { dc.unregisterObserver() }.onFailure { logger.warn("unregisterObserver threw", it) }
+                runCatching { dc.close() }.onFailure { logger.warn("dataChannel.close threw", it) }
+                runCatching { dc.dispose() }.onFailure { logger.warn("dataChannel.dispose threw", it) }
             }
-
-            runCatching { peerConnection.close() }.onFailure { LOGGER.warn("peerConnection.close threw", it) }
+            runCatching { peerConnection.close() }.onFailure { logger.warn("peerConnection.close threw", it) }
         }
     }
 
-    private val channelConfig: ChannelConfig = DefaultChannelConfig(this)
+    private val channelConfig = DefaultChannelConfig(this)
 
     @Volatile
     private var closed = false
@@ -60,7 +59,12 @@ class RtcChannel(
 
     override fun metadata(): ChannelMetadata = METADATA
     override fun config(): ChannelConfig = channelConfig
-    override fun newUnsafe(): AbstractUnsafe = RtcUnsafe()
+    override fun newUnsafe(): AbstractUnsafe = object : AbstractUnsafe() {
+        override fun connect(remoteAddress: SocketAddress, localAddress: SocketAddress, promise: ChannelPromise) {
+            promise.setFailure(UnsupportedOperationException("RtcChannel is already connected by WebRTC"))
+        }
+    }
+
     override fun isCompatible(loop: EventLoop): Boolean = loop is SingleThreadEventLoop
     override fun isOpen(): Boolean = !closed
     override fun isActive(): Boolean = activated && !closed
@@ -69,25 +73,32 @@ class RtcChannel(
 
     override fun doRegister(promise: ChannelPromise) {
         val dc = handshakeResult.dataChannel
-        LOGGER.debug("doRegister, DataChannel state={}", dc.state)
         val initialState = dc.state
         eventLoop().execute {
             handleStateChange(initialState)
             dc.registerObserver(object : RTCDataChannelObserver {
                 override fun onMessage(buffer: RTCDataChannelBuffer) {
-                    val copy = Unpooled.copiedBuffer(buffer.data)
-                    eventLoop().execute { handleMessage(copy) }
+                    val data = buffer.data
+                    val bytes = ByteArray(data.remaining())
+                    data.get(bytes)
+                    val byteBuf = Unpooled.wrappedBuffer(bytes)
+                    eventLoop().execute { handleMessage(byteBuf) }
                 }
 
                 override fun onStateChange() {
-                    val state = handshakeResult.dataChannel.state
-                    LOGGER.debug("DataChannel state -> {}", state)
-                    eventLoop().execute { handleStateChange(state) }
+                    eventLoop().execute {
+                        if (closed) return@execute
+                        try {
+                            handleStateChange(handshakeResult.dataChannel.state)
+                        } catch (_: RuntimeException) {
+                            closeFromTransport()
+                        }
+                    }
                 }
 
                 override fun onBufferedAmountChange(previousAmount: Long) {
-                    if (handshakeResult.dataChannel.bufferedAmount <= LOW_WATER_MARK) {
-                        eventLoop().execute { setWriteStalled(false) }
+                    if (handshakeResult.dataChannel.bufferedAmount < HIGH_WATER_MARK) {
+                        eventLoop().execute { setWriteStalled(false); flush() }
                     }
                 }
             })
@@ -137,7 +148,7 @@ class RtcChannel(
                 val rtcBuffer = RTCDataChannelBuffer(ByteBuffer.wrap(bytes), true)
                 handshakeResult.dataChannel.send(rtcBuffer)
             } catch (e: Exception) {
-                LOGGER.error("[P2P-Netty] Failed to send DataChannel message", e)
+                logger.error("Failed to send DataChannel message", e)
                 throw e
             }
             idx += chunk
@@ -146,51 +157,35 @@ class RtcChannel(
     }
 
     private fun setWriteStalled(stalled: Boolean) {
-        if (!closed && stalled != writeStalled) {
-            writeStalled = stalled
-            val outbound = unsafe().outboundBuffer()
-            outbound?.setUserDefinedWritability(BACKPRESSURE_USER_FLAG, !stalled)
-            if (!stalled) unsafe().flush()
-        }
+        if (closed || writeStalled == stalled) return
+        writeStalled = stalled
+        val buffer = unsafe().outboundBuffer()
+        if (buffer != null) buffer.setUserDefinedWritability(BACKPRESSURE_USER_FLAG, !stalled)
     }
 
     private fun handleMessage(buf: ByteBuf) {
-        if (!closed && activated && config().isAutoRead) {
-            pipeline().fireChannelRead(buf)
-            pipeline().fireChannelReadComplete()
-        } else buf.release()
+        if (closed || !activated) {
+            buf.release()
+            return
+        }
+        pipeline().fireChannelRead(buf)
+        pipeline().fireChannelReadComplete()
     }
 
     private fun handleStateChange(state: RTCDataChannelState) {
-        if (!closed) {
-            when (state) {
-                RTCDataChannelState.OPEN -> {
-                    if (!activated) {
-                        LOGGER.info("DataChannel OPEN, activating Netty RtcChannel")
-                        activated = true
-                        pipeline().fireChannelActive()
-                    }
-                }
-
-                RTCDataChannelState.CLOSING, RTCDataChannelState.CLOSED -> {
-                    closeFromTransport()
-                }
-
-                else -> {}
+        if (closed) return
+        if (state === RTCDataChannelState.OPEN) {
+            if (!activated) {
+                activated = true
+                pipeline().fireChannelActive()
             }
-        }
+        } else if (state === RTCDataChannelState.CLOSING || state === RTCDataChannelState.CLOSED) closeFromTransport()
     }
 
     private fun closeFromTransport() {
         if (!closed) {
-            LOGGER.debug("Closing RtcChannel from transport")
+            logger.debug("Closing RtcChannel from transport")
             unsafe().close(voidPromise())
-        }
-    }
-
-    private inner class RtcUnsafe : AbstractUnsafe() {
-        override fun connect(remote: SocketAddress, local: SocketAddress, promise: ChannelPromise) {
-            promise.setFailure(UnsupportedOperationException("RtcChannel is already connected to its RTCDataChannel"))
         }
     }
 }

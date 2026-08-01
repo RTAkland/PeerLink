@@ -27,6 +27,7 @@ sealed interface SignalEvent {
 
     @Serializable
     data class PlayerKicked(
+        val playerId: Uuid,
         val reason: String?,
     ) : SignalEvent
 

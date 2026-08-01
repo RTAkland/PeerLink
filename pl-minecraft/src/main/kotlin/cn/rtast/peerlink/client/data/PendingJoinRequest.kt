@@ -7,12 +7,12 @@
 
 package cn.rtast.peerlink.client.data
 
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Job
 import kotlin.uuid.Uuid
 
 data class PendingJoinRequest(
     val applicantId: Uuid,
     val applicantName: String,
-    val timestampMs: Long = System.currentTimeMillis(),
-    val timeoutJob: Job
+    val responseDeferred: CompletableDeferred<Boolean> = CompletableDeferred()
 )

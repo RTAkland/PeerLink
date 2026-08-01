@@ -7,8 +7,8 @@
 package cn.rtast.peerlink.client.screen
 
 import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.data.ConnectResult
 import cn.rtast.peerlink.client.util.showNotification
-import cn.rtast.peerlink.data.play.JoinResponse
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -93,26 +93,18 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
                     { this.updateSelectButtonStatus() }
                 ) { screen ->
                     screenScope.launch {
-                        try {
-                            manager.joinRoom(roomId, { response ->
-                                minecraft.execute {
-                                    when (response) {
-                                        is JoinResponse.Rejected -> screen.updateTitle(
-                                            Component.translatable("peerlink.hostRejectedJoinRequest")
-                                                .append(" ${response.reason}")
-                                        )
-
-                                        is JoinResponse.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
-                                        is JoinResponse.InvalidRoom -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                                        is JoinResponse.Error -> screen.updateTitle(
-                                            Component.translatable("peerlink.signalingRespondError")
-                                                .append(" ${response.message}")
-                                        )
-                                    }
-                                }
-                            }) { minecraft.execute { screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval")) } }
-                        } catch (e: Exception) {
-                            minecraft.execute { screen.updateTitle(Component.literal(e.message ?: "Connection Error")) }
+                        manager.connect(roomId) { result ->
+                            when (result) {
+                                ConnectResult.Awaiting -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
+                                ConnectResult.Rejected -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
+                                ConnectResult.Invalid -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
+                                ConnectResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                                ConnectResult.SignalingError, ConnectResult.Failed -> screen.updateTitle(
+                                    Component.translatable(
+                                        "peerlink.signalingRespondError"
+                                    )
+                                )
+                            }
                         }
                     }
                 }

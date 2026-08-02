@@ -4,10 +4,11 @@
  * Date: 2026/7/31
  */
 
-package cn.rtast.peerlink.client.screen
+package cn.rtast.peerlink.client.screen.play
 
 import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.data.PendingJoinRequest
+import cn.rtast.peerlink.client.util.asTooltip
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
@@ -52,14 +53,16 @@ class PendingJoinRequestsScreen(
         }.launchIn(screenScope)
     }
 
-    private fun updateRequestsUI(requests: List<PendingJoinRequest>) {
-        val selectionList = this.pendingRequestSelectionList ?: return
+    private fun updateRequestsUI(requests: List<PendingJoinRequest>) = minecraft.execute {
+        val selectionList = this.pendingRequestSelectionList ?: return@execute
+        if (requests.isEmpty()) {
+            selectionList.children().clear()
+            selectionList.replaceEntries(emptyList())
+            return@execute
+        }
         val currentEntries = selectionList.children().associateBy { it.request.applicantId }
         val updatedEntries = requests.map { request -> currentEntries[request.applicantId] ?: _Entry(request) }
         selectionList.replaceEntries(updatedEntries)
-        if (updatedEntries.isEmpty()) {
-            this.minecraft.narrator.saySystemQueued(NO_PENDING_REQUESTS_TEXT)
-        }
     }
 
     override fun repositionElements() {
@@ -90,9 +93,6 @@ class PendingJoinRequestsScreen(
         fun hasNoPendingRequests(): Boolean = this.itemCount == 0
         fun removeRequest(entry: _Entry) {
             this.removeEntry(entry)
-            if (this.hasNoPendingRequests()) {
-                this@PendingJoinRequestsScreen.minecraft.narrator.saySystemQueued(NO_PENDING_REQUESTS_TEXT)
-            }
         }
     }
 
@@ -108,7 +108,7 @@ class PendingJoinRequestsScreen(
         init {
             val listWidth = this@PendingJoinRequestsScreen.pendingRequestSelectionList?.rowWidth ?: 280
             val maxTextWidth = listWidth - 32 - 32 - 42 - 28
-            val uuidTooltip = Tooltip.create(Component.literal("UUID: ${request.applicantId}"))
+            val uuidTooltip = Component.literal("UUID: ${request.applicantId}").asTooltip()
             this.applicantNameWidget = StringWidget(
                 Component.literal(request.applicantName),
                 this@PendingJoinRequestsScreen.font
@@ -165,6 +165,7 @@ class PendingJoinRequestsScreen(
             this.rejectButton.active = false
             if (accept) PeerLink.manager!!.acceptJoinRequest(request.applicantId)
             else PeerLink.manager!!.rejectJoinRequest(request.applicantId)
+            this@PendingJoinRequestsScreen.pendingRequestSelectionList?.removeRequest(this)
         }
     }
 

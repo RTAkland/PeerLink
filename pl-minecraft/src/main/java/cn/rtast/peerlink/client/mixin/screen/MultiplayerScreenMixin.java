@@ -8,7 +8,7 @@
 package cn.rtast.peerlink.client.mixin.screen;
 
 import cn.rtast.peerlink.client.gui.PeerLinkButtons;
-import cn.rtast.peerlink.client.screen.PeerLinkScreen;
+import cn.rtast.peerlink.client.screen.play.PeerLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;

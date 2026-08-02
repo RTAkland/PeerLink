@@ -8,9 +8,11 @@
 package cn.rtast.peerlink.client.gui
 
 import cn.rtast.peerlink.client.PeerLink.Companion.rpcClient
-import cn.rtast.peerlink.client.screen.PeerLinkHostScreen
-import cn.rtast.peerlink.client.screen.PeerLinkScreen
+import cn.rtast.peerlink.client.screen.SignalingServerOptionsScreen
+import cn.rtast.peerlink.client.screen.play.PeerLinkHostScreen
+import cn.rtast.peerlink.client.screen.play.PeerLinkScreen
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
+import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphicsExtractor
 import net.minecraft.client.gui.screens.PauseScreen
@@ -18,8 +20,10 @@ import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen
+import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
+import net.minecraft.sounds.SoundEvents
 
 object SignalingStatusIndicator {
     private const val SCALE = 2
@@ -46,6 +50,21 @@ object SignalingStatusIndicator {
             ) {
                 ScreenEvents.afterExtract(screen).register { _, guiGraphics, mouseX, mouseY, _ ->
                     renderIndicator(guiGraphics, client, scaledWidth, mouseX, mouseY)
+                }
+
+                ScreenMouseEvents.afterMouseClick(screen).register { screen, event, _ ->
+                    if (event.buttonInfo.button == 0) {
+                        val size = 8 * SCALE
+                        val x = scaledWidth - size - MARGIN
+                        val y = MARGIN
+                        if (event.x in x.toDouble()..(x + size).toDouble() &&
+                            event.y in y.toDouble()..(y + size).toDouble()
+                        ) {
+                            client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f))
+                            client.gui.setScreen(SignalingServerOptionsScreen(screen))
+                        }
+                    }
+                    true
                 }
             }
         }

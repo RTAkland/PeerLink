@@ -34,11 +34,6 @@ interface MinecraftSignalingService {
     suspend fun createRoom(): RoomState
 
     /**
-     * 发送进房请求
-     */
-    suspend fun joinRoom(roomId: String): JoinResponse
-
-    /**
      * 响应进房请求
      */
     suspend fun respondJoinRequest(applicantId: Uuid, accept: Boolean, reason: String? = null)
@@ -69,7 +64,12 @@ interface MinecraftSignalingService {
     suspend fun getRoomStateById(roomId: String): RoomState?
 
     /**
-     * 获取TURN/STUN服务器凭证
+     * 请求加入房间
+     */
+    suspend fun requestJoin(roomId: String): JoinResponse
+
+    /**
+     * 获取STUN/TURN服务器凭证
      */
     suspend fun acquireTurnCredentials(): TurnCredentials
 }

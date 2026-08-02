@@ -8,6 +8,7 @@
 package cn.rtast.peerlink.client
 
 import cn.rtast.peerlink.client.data.PeerLinkClientConfig
+import cn.rtast.peerlink.client.gui.HostJoinRequestNotifier
 import cn.rtast.peerlink.client.gui.SignalingStatusIndicator
 import cn.rtast.peerlink.client.network.PeerLinkManager
 import cn.rtast.peerlink.client.network.RpcClient
@@ -41,6 +42,7 @@ class PeerLink : ModInitializer {
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ -> shutdown() }
         initRpcAndManager(config.signalingServer)
         SignalingStatusIndicator.register()
+        HostJoinRequestNotifier.register()
     }
 
     fun initRpcAndManager(signalingUrl: String) {

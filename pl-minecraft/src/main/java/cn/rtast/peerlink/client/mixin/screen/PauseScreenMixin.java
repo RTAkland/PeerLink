@@ -8,9 +8,9 @@
 package cn.rtast.peerlink.client.mixin.screen;
 
 import cn.rtast.peerlink.client.gui.PeerLinkButtons;
-import cn.rtast.peerlink.client.screen.HostManagementScreen;
-import cn.rtast.peerlink.client.screen.PeerLinkHostScreen;
-import cn.rtast.peerlink.client.screen.PendingJoinRequestsScreen;
+import cn.rtast.peerlink.client.screen.play.HostManagementScreen;
+import cn.rtast.peerlink.client.screen.play.PeerLinkHostScreen;
+import cn.rtast.peerlink.client.screen.play.PendingJoinRequestsScreen;
 import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.gui.layouts.LinearLayout;
 import net.minecraft.client.gui.screens.PauseScreen;

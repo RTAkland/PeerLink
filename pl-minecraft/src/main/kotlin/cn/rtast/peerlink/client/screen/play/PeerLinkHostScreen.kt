@@ -4,7 +4,7 @@
  * Date: 2026/7/29
  */
 
-package cn.rtast.peerlink.client.screen
+package cn.rtast.peerlink.client.screen.play
 
 import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
@@ -45,10 +45,9 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
     private val roomIdButton = Button.builder(currentRoomIdComponent) {
         val roomId = currentRoomState?.roomId
-        println(roomId)
         if (roomId != null) {
             minecraft.keyboardHandler.clipboard = roomId
-            showNotification(Component.translatable("peerlink.roomIdCopied"), null)
+            showNotification(Component.translatable("peerlink.sessionIdCopied"), null)
         }
     }.width(210).build()
 
@@ -57,11 +56,11 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
         private val GAME_MODE_LABEL = Component.translatable("selectWorld.gameMode")
         private val ALLOW_COMMANDS_LABEL = Component.translatable("selectWorld.allowCommands")
         private val ROOM_ID_HEADER =
-            Component.translatable("peerlink.screen.host.roomIdHeader").withStyle(ChatFormatting.GRAY)
+            Component.translatable("peerlink.screen.host.sessionIdHeader").withStyle(ChatFormatting.GRAY)
         private val OTHER_PLAYERS_HEADER = Component.translatable("menu.multiplayerOptions.otherPlayers.header")
             .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD)
         private val APPLY_CHANGES = Component.translatable("menu.multiplayerOptions.applyChanges")
-        private val PLACEHOLDER_ROOM_ID = Component.translatable("peerlink.screen.host.roomIdPlaceholder")
+        private val PLACEHOLDER_ROOM_ID = Component.translatable("peerlink.screen.host.sessionIdPlaceholder")
         private val ONLINE_MODE = Component.translatable("peerlink.screen.host.onlineMode")
         var currentRoomState: RoomState? = null
     }
@@ -143,7 +142,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             if (this.peerLinkEnabled) {
                 if (rpcClient?.isConnected != true) {
                     showNotification(
-                        Component.translatable("peerlink.roomCreateFailed"),
+                        Component.translatable("peerlink.sessionCreateFailed"),
                         Component.translatable("peerlink.signalingServerNotConnected")
                     )
                     this.updateApplyChangesActiveState()
@@ -151,7 +150,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 }
 
                 if (currentRoomState == null) {
-                    showNotification(Component.translatable("peerlink.p2p.creatingRoom"), null)
+                    showNotification(Component.translatable("peerlink.p2p.creatingSession"), null)
                     screenScope.launch {
                         try {
                             manager!!.host(
@@ -172,7 +171,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                         } catch (e: Exception) {
                             minecraft.execute {
                                 showNotification(
-                                    Component.translatable("peerlink.roomCreateFailed"),
+                                    Component.translatable("peerlink.sessionCreateFailed"),
                                     Component.literal(e.message ?: "Unknown Error")
                                 )
                                 this@PeerLinkHostScreen.updateApplyChangesActiveState()

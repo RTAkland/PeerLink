@@ -8,6 +8,7 @@ package cn.rtast.peerlink.client.network
 
 import cn.rtast.peerlink.client.data.ConnectResult
 import cn.rtast.peerlink.client.data.PendingJoinRequest
+import cn.rtast.peerlink.client.gui.HostJoinRequestNotifier
 import cn.rtast.peerlink.client.minecraft
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
 import cn.rtast.peerlink.client.util._answer
@@ -16,23 +17,25 @@ import cn.rtast.peerlink.client.webrtc.RtcChannel
 import cn.rtast.peerlink.client.webrtc.RtcHandshake
 import cn.rtast.peerlink.client.webrtc.deserializeCandidate
 import cn.rtast.peerlink.client.webrtc.serializeCandidate
+import cn.rtast.peerlink.data.play.JoinResponse
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
+import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import com.mojang.logging.LogUtils
 import dev.kastle.webrtc.PeerConnectionFactory
 import dev.kastle.webrtc.RTCConfiguration
 import dev.kastle.webrtc.RTCIceCandidate
 import dev.kastle.webrtc.RTCIceServer
 import kotlinx.coroutines.*
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.*
 import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.screens.DisconnectedScreen
+import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl
 import net.minecraft.client.multiplayer.LevelLoadTracker
 import net.minecraft.client.multiplayer.ServerData
+import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.PacketFlow
 import net.minecraft.network.protocol.login.LoginProtocols
 import net.minecraft.network.protocol.login.ServerboundHelloPacket
@@ -44,7 +47,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.random.Random
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
 class PeerLinkManager(
@@ -60,12 +65,16 @@ class PeerLinkManager(
     private val pendingRequests = ConcurrentHashMap<Uuid, PendingJoinRequest>()
     private val _pendingRequestsFlow = MutableStateFlow<List<PendingJoinRequest>>(emptyList())
     val pendingRequestsFlow = _pendingRequestsFlow.asStateFlow()
+    private val turnCredentialsMap = ConcurrentHashMap<Uuid, TurnCredentials>()
+    private var onConnectResult: (ConnectResult) -> Unit = {}
 
     suspend fun initialize() {
         eventListenJob?.cancel()
         withContext(Dispatchers.Default) { factory }
-        eventListenJob = rpcClient.signalingService!!
-            .observeEvents().onEach { event -> handleSignalingEvent(event) }.launchIn(scope)
+        eventListenJob = rpcClient.signalingService!!.observeEvents()
+            .onEach { event -> handleSignalingEvent(event) }
+            .catch { e -> logger.error("Signaling observeEvents flow failed!", e) }
+            .launchIn(scope)
     }
 
     fun destroy() {
@@ -81,17 +90,20 @@ class PeerLinkManager(
             is SignalEvent.JoinRequested -> {
                 val applicantUuid = event.applicantId
                 val applicantName = event.applicantName
+                HostJoinRequestNotifier.showNotification(applicantName)
                 scope.launch {
-                    val request = PendingJoinRequest(applicantUuid, applicantName)
-                    pendingRequests[applicantUuid] = request
-                    updateRequestsFlow()
-                    val approved = withTimeoutOrNull(30_000.milliseconds) {
-                        request.responseDeferred.await()
-                    } ?: false
-                    pendingRequests.remove(applicantUuid)
-                    updateRequestsFlow()
-                    if (approved) rpcClient.signalingService?.respondJoinRequest(applicantUuid, true)
-                    else rpcClient.signalingService?.respondJoinRequest(applicantUuid, false)
+                    runCatching {
+                        val request = PendingJoinRequest(applicantUuid, applicantName)
+                        pendingRequests[applicantUuid] = request
+                        updateRequestsFlow()
+                        val approved = withTimeoutOrNull(30_000.milliseconds) {
+                            request.responseDeferred.await()
+                        } ?: false
+                        pendingRequests.remove(applicantUuid)
+                        updateRequestsFlow()
+                        if (approved) rpcClient.signalingService?.respondJoinRequest(applicantUuid, true)
+                        else rpcClient.signalingService?.respondJoinRequest(applicantUuid, false)
+                    }.onFailure {  }
                 }
             }
 
@@ -102,8 +114,9 @@ class PeerLinkManager(
                     runCatching {
                         when (message.type) {
                             SignalingMessage.SignalingType.Offer -> {
-                                logger.info("Received OFFER from $senderUuid")
-                                val rtcConfig = createRTCConfig()
+                                val credentials = rpcClient.signalingService?.acquireTurnCredentials()
+                                    ?: throw IllegalStateException("Signaling Server Unavailable")
+                                val rtcConfig = createRTCConfig(credentials)
                                 val handshake = getOrCreateHandshake(senderUuid, isInitiator = false, rtcConfig)
                                 val answerSdp = handshake.acceptOffer(message.payload)
                                 markRemoteDescriptionReady(senderUuid, handshake)
@@ -114,47 +127,70 @@ class PeerLinkManager(
                                         handshakes.remove(senderUuid, handshake)
                                         startHost(result)
                                     }.onFailure { e ->
-                                        logger.error("Host handshake with $senderUuid failed: ${e.message}")
                                         handshake.abort("Host connection failed: ${e.message}")
                                     }
                                 }
                             }
 
                             SignalingMessage.SignalingType.Answer -> {
-                                logger.info("Received ANSWER from $senderUuid")
                                 val handshake = handshakes[senderUuid]
                                 if (handshake != null) {
                                     handshake.applyAnswer(message.payload)
                                     markRemoteDescriptionReady(senderUuid, handshake)
-                                } else {
-                                    logger.warn("Received ANSWER from $senderUuid but no handshake found")
-                                }
+                                } else logger.warn("Received ANSWER from $senderUuid but no handshake found")
                             }
 
                             SignalingMessage.SignalingType.Ice -> {
                                 val candidate = message.payload.deserializeCandidate()
                                 val handshake = handshakes[senderUuid]
                                 val isReady = remoteDescriptionReadyMap[senderUuid]?.get() == true
-
                                 if (handshake != null && isReady) {
                                     handshake.addRemoteIceCandidate(candidate)
                                 } else {
-                                    pendingIceCandidates.computeIfAbsent(senderUuid) { ConcurrentLinkedQueue() }
-                                        .add(candidate)
+                                    pendingIceCandidates.computeIfAbsent(senderUuid) {
+                                        ConcurrentLinkedQueue()
+                                    }.add(candidate)
                                 }
                             }
                         }
-                    }.onFailure { e ->
-                        logger.error("Failed to handle signal ${message.type} from $senderUuid: ${e.message}")
-                    }
+                    }.onFailure { e -> logger.error("Failed to handle signal ${message.type} from $senderUuid: ${e.message}") }
                 }
             }
 
             is SignalEvent.PlayerJoined -> logger.info("Player ${event.player.uuid} joined signaling room")
-            is SignalEvent.PlayerKicked -> cleanupPeer(event.playerId)
             is SignalEvent.PlayerLeft -> cleanupPeer(event.playerId)
             is SignalEvent.RoomClosed -> abortAll("Room closed")
-            is SignalEvent.TurnCredentialsIssued -> {}
+            is SignalEvent.TurnCredentialsIssued -> turnCredentialsMap[event.targetPlayerId] = event.credentials
+            is SignalEvent.JoinAwaiting -> this.onConnectResult.invoke(ConnectResult.Awaiting(event.host))
+            is SignalEvent.PlayerKicked -> {
+                val kickedPlayerUuid = event.playerId
+                val myUuid = minecraft.user.profileId.toKotlinUuid()
+                if (kickedPlayerUuid == myUuid) {
+                    logger.warn("You were kicked from the room. Reason: ${event.reason}")
+                    abortAll("Kicked by host: ${event.reason}")
+                    minecraft.execute {
+                        if (minecraft.level != null || minecraft.singleplayerServer != null) {
+                            minecraft.disconnectWithProgressScreen(false)
+                            minecraft.gui.setScreen(
+                                DisconnectedScreen(
+                                    TitleScreen(),
+                                    Component.translatable("peerlink.disconnected"),
+                                    Component.translatable("peerlink.kickedByHost")
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    cleanupPeer(kickedPlayerUuid)
+                    val server = minecraft.singleplayerServer
+                    if (server != null && server.isPublished) {
+                        server.execute {
+                            val playerNode = server.playerList.getPlayer(kickedPlayerUuid.toJavaUuid())
+                            playerNode?.connection?.disconnect(Component.translatable("peerlink.kickedByHost"))
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -172,31 +208,33 @@ class PeerLinkManager(
         _pendingRequestsFlow.value = pendingRequests.values.toList()
     }
 
-    fun connect(
-        roomId: String,
-        onResult: (ConnectResult) -> Unit,
-    ) = scope.launch {
+    fun connect(roomId: String, onResult: (ConnectResult) -> Unit) = scope.launch {
+        this@PeerLinkManager.onConnectResult = onResult
         val signaling = rpcClient.signalingService
         if (signaling == null) {
             onResult(ConnectResult.SignalingError)
             return@launch
         }
-        val roomState = signaling.getRoomStateById(roomId)
-        if (roomState == null) {
-            onResult(ConnectResult.Invalid)
-            return@launch
-        }
 
         runCatching {
-            val rtcConfig = createRTCConfig()
-            val hostUuid = roomState.hostPlayerUuid
-            val handshake = getOrCreateHandshake(hostUuid, isInitiator = true, rtcConfig)
-            val offer = handshake.createOffer()
-            signaling.sendSignal(hostUuid, _offer(hostUuid, offer))
-            val result = withTimeout(20_000.milliseconds) { handshake.awaitResult() }
-            handshakes.remove(hostUuid, handshake)
-            startJoin(result)
-            onResult(ConnectResult.Awaiting)
+            when (val response = signaling.requestJoin(roomId)) {
+                is JoinResponse.Accepted -> {
+                    val hostUuid = response.hostId
+                    turnCredentialsMap[hostUuid] = response.credentials
+                    val rtcConfig = createRTCConfig(response.credentials)
+                    val handshake = getOrCreateHandshake(hostUuid, isInitiator = true, rtcConfig)
+                    val offer = handshake.createOffer()
+                    signaling.sendSignal(hostUuid, _offer(hostUuid, offer))
+                    val result = withTimeout(20.seconds) { handshake.awaitResult() }
+                    handshakes.remove(hostUuid, handshake)
+                    startJoin(result)
+                    onResult(ConnectResult.Accepted)
+                }
+
+                is JoinResponse.Rejected -> onResult(ConnectResult.Rejected)
+                is JoinResponse.Error -> onResult(ConnectResult.Failed)
+                is JoinResponse.InvalidRoom -> onResult(ConnectResult.Invalid)
+            }
         }.onFailure { e ->
             logger.error("Failed to connect to room $roomId: ${e.message}")
             onResult(ConnectResult.Failed)
@@ -234,6 +272,7 @@ class PeerLinkManager(
         handshakes.remove(targetUuid)?.abort("Peer disconnected")
         pendingIceCandidates.remove(targetUuid)
         remoteDescriptionReadyMap.remove(targetUuid)
+        turnCredentialsMap.remove(targetUuid)
     }
 
     private fun abortAll(reason: String) {
@@ -283,8 +322,7 @@ class PeerLinkManager(
         }
     }
 
-    private suspend fun createRTCConfig(): RTCConfiguration = RTCConfiguration().apply {
-        val credentials = rpcClient.signalingService!!.acquireTurnCredentials()
+    private fun createRTCConfig(credentials: TurnCredentials): RTCConfiguration = RTCConfiguration().apply {
         iceServers.add(RTCIceServer().apply {
             urls.addAll(credentials.stunServers)
         })

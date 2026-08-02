@@ -14,10 +14,10 @@ import kotlin.uuid.Uuid
 @Serializable
 sealed interface SignalEvent {
     @Serializable
-    data class JoinRequested(
-        val applicantId: Uuid,
-        val applicantName: String,
-    ) : SignalEvent
+    data class JoinRequested(val applicantId: Uuid, val applicantName: String) : SignalEvent
+
+    @Serializable
+    data class JoinAwaiting(val host: Uuid) : SignalEvent
 
     @Serializable
     data class TurnCredentialsIssued(

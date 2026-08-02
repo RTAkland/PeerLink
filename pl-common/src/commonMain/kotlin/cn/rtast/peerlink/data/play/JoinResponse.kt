@@ -14,10 +14,7 @@ import kotlin.uuid.Uuid
 @Serializable
 sealed interface JoinResponse {
     @Serializable
-    data class Accepted(
-        val hostId: Uuid,
-        val credentials: TurnCredentials,
-    ) : JoinResponse
+    data class Accepted(val hostId: Uuid, val credentials: TurnCredentials) : JoinResponse
 
     @Serializable
     data class Rejected(val reason: String) : JoinResponse

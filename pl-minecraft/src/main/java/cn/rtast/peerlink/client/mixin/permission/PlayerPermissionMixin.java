@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.mixin.permission;
 
-import cn.rtast.peerlink.client.screen.PeerLinkHostScreen;
+import cn.rtast.peerlink.client.screen.play.PeerLinkHostScreen;
 import cn.rtast.peerlink.client.util.HostPlayerStorage;
 import com.mojang.authlib.GameProfile;
 import kotlin.uuid.UuidKt;

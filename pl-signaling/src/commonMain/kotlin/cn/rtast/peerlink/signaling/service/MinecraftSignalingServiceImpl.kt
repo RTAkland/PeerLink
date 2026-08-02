@@ -77,13 +77,13 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun sendHeartbeat(clientTimestamp: Long): Long {
-        val player = context.requirePlayer()
+        val player = context.getPlayer()
         refreshHeartbeatTimer(player.uuid)
         return clientTimestamp
     }
 
     override fun observeEvents(): Flow<SignalEvent> = flow {
-        val player = context.requirePlayer()
+        val player = context.getPlayer()
         val userFlow = getOrCreatePlayerFlow(player.uuid)
         emitAll(userFlow.asSharedFlow().onCompletion {
             handlePlayerDisconnect(player.uuid)
@@ -91,7 +91,7 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun createRoom(): RoomState {
-        val hostPlayer = context.requirePlayer()
+        val hostPlayer = context.getPlayer()
         refreshHeartbeatTimer(hostPlayer.uuid)
         leaveRoomInternal(hostPlayer.uuid)
         val roomId = generateRoomId()
@@ -100,47 +100,47 @@ class MinecraftSignalingServiceImpl(
         kvRepository.setPlayerRoom(hostPlayer.uuid, roomId)
         val localContext = LocalRoomContext(roomId, hostPlayer.uuid)
         localRoomContexts[roomId] = localContext
-        logger.info("[RPC Server] Room $roomId created in KV by host: ${hostPlayer.name} (${hostPlayer.uuid})")
+        logger.info("getPlayerRoom $roomId created in KV by host: ${hostPlayer.name} (${hostPlayer.uuid})")
         return RoomState(roomId, hostPlayer.uuid, listOf(hostPlayer))
     }
 
-    override suspend fun joinRoom(roomId: String): JoinResponse {
-        val applicant = context.requirePlayer()
+    override suspend fun requestJoin(roomId: String): JoinResponse {
+        val applicant = context.getPlayer()
         refreshHeartbeatTimer(applicant.uuid)
         val hostId = kvRepository.getRoomHost(roomId) ?: return JoinResponse.InvalidRoom
-        val players = kvRepository.getRoomPlayers(roomId)
-        if (players.any { it.uuid == applicant.uuid }) return JoinResponse.Error("You are already in this room")
-        leaveRoomInternal(applicant.uuid)
+        val localContext = localRoomContexts[roomId]
+            ?: return JoinResponse.Error("Host room context not found on this server")
+        playerEventFlows[applicant.uuid]?.tryEmit(SignalEvent.JoinAwaiting(hostId))
         val deferred = CompletableDeferred<JoinResponse>()
-        val localContext = localRoomContexts.computeIfAbsent(roomId) { LocalRoomContext(roomId, hostId) }
         localContext.pendingRequests[applicant.uuid] = DeferredRequest(applicant, deferred)
-        kvRepository.setPlayerRoom(applicant.uuid, roomId)
-        val hostFlow = playerEventFlows[hostId]
-        if (hostFlow != null) {
-            hostFlow.emit(SignalEvent.JoinRequested(applicant.uuid, applicant.name))
-            logger.info("[RPC Server] Join request from ${applicant.name} sent to host $hostId")
-        } else {
-            localContext.pendingRequests.remove(applicant.uuid)
-            kvRepository.removePlayerRoom(applicant.uuid)
-            return JoinResponse.Error("Host is offline or unreachable")
-        }
+        playerEventFlows[hostId]?.emit(SignalEvent.JoinRequested(applicant.uuid, applicant.name))
+        logger.info("Player ${applicant.name} (${applicant.uuid}) requested to join room $roomId")
+        return deferred.await()
+    }
 
-        return try {
-            withTimeout(30_000L.milliseconds) { deferred.await() }
-        } catch (_: TimeoutCancellationException) {
-            localContext.pendingRequests.remove(applicant.uuid)
-            kvRepository.removePlayerRoom(applicant.uuid)
-            JoinResponse.Error("The host did not respond to the request")
+    override suspend fun acquireTurnCredentials(): TurnCredentials {
+        val player = context.getPlayer()
+        refreshHeartbeatTimer(player.uuid)
+        val session = kvRepository.getPlayerRoom(player.uuid)
+            ?: throw IllegalStateException("Unauthorized: You are not in any room")
+        val hostId = kvRepository.getRoomHost(session)
+            ?: throw IllegalStateException("Room $session not found")
+        if (player.uuid == hostId) {
+            logger.info("Host ${player.name} (${player.uuid}) requested TURN credentials for room $session")
+            return fetchTurnCredentials()
+        } else {
+            logger.warn("Non-host player ${player.name} (${player.uuid}) attempted to fetch TURN credentials for room $session")
+            throw IllegalStateException("Forbidden: Only the room host can request TURN credentials directly")
         }
     }
 
     override suspend fun respondJoinRequest(applicantId: Uuid, accept: Boolean, reason: String?) {
-        val host = context.requirePlayer()
-        refreshHeartbeatTimer(host.uuid)
-        val roomId = kvRepository.getPlayerRoom(host.uuid)
-            ?: throw IllegalStateException("Host is not in any room")
-        val hostId = kvRepository.getRoomHost(roomId)
-            ?: throw IllegalStateException("Room not found")
+        val operator = context.getPlayer()
+        refreshHeartbeatTimer(operator.uuid)
+        val roomId = kvRepository.getPlayerRoom(operator.uuid)
+            ?: throw IllegalStateException("Operator is not in any room")
+        val hostId = kvRepository.getRoomHost(roomId) ?: throw IllegalStateException("Room not found")
+        if (operator.uuid != hostId) throw IllegalStateException("Only the room host can respond to join requests")
         val localContext = localRoomContexts[roomId]
             ?: throw IllegalStateException("Local room context lost")
         val pending = localContext.pendingRequests.remove(applicantId)
@@ -153,39 +153,44 @@ class MinecraftSignalingServiceImpl(
             val joinEvent = SignalEvent.PlayerJoined(pending.applicant)
             val allPlayers = kvRepository.getRoomPlayers(roomId)
             allPlayers.forEach { existing ->
-                if (existing.uuid != applicantId && existing.uuid != hostId) playerEventFlows[existing.uuid]?.emit(
-                    joinEvent
-                )
+                if (existing.uuid != applicantId && existing.uuid != hostId) {
+                    playerEventFlows[existing.uuid]?.emit(joinEvent)
+                }
             }
             playerEventFlows[hostId]?.emit(turnEventForHost)
-            logger.info("[RPC Server] Host accepted ${pending.applicant.name} into room $roomId")
+            logger.info("Host ${operator.name} ($hostId) accepted ${pending.applicant.name} ($applicantId) into room $roomId")
         } else {
             pending.deferred.complete(JoinResponse.Rejected(reason ?: "Host rejected your request"))
             kvRepository.removePlayerRoom(applicantId)
-            logger.info("[RPC Server] Host rejected $applicantId. Reason: $reason")
+            logger.info("Host ${operator.name} ($hostId) rejected $applicantId. Reason: $reason")
         }
     }
 
     override suspend fun kickPlayer(targetPlayerId: Uuid, reason: String?) {
-        val host = context.requirePlayer()
-        refreshHeartbeatTimer(host.uuid)
-        val roomId = kvRepository.getPlayerRoom(host.uuid)
+        val operator = context.getPlayer()
+        refreshHeartbeatTimer(operator.uuid)
+        val roomId = kvRepository.getPlayerRoom(operator.uuid)
             ?: throw IllegalStateException("Operator is not in any room")
-        val hostId = kvRepository.getRoomHost(roomId)
-            ?: throw IllegalStateException("Room $roomId not found")
-        playerEventFlows[targetPlayerId]?.emit(SignalEvent.PlayerKicked(targetPlayerId, reason ?: "Kicked by host"))
+        val hostId = kvRepository.getRoomHost(roomId) ?: throw IllegalStateException("Room $roomId not found")
+        if (operator.uuid != hostId) throw IllegalStateException("Only the room host can kick players")
+        if (targetPlayerId == hostId) throw IllegalArgumentException("Host cannot kick themselves")
+        val roomMembers = kvRepository.getRoomPlayers(roomId)
+        val kickEvent = SignalEvent.PlayerKicked(targetPlayerId, reason ?: "Kicked by host")
+        roomMembers.forEach { member -> playerEventFlows[member.uuid]?.emit(kickEvent) }
+        kvRepository.removeRoomPlayer(roomId, targetPlayerId)
+        kvRepository.removePlayerRoom(targetPlayerId)
         leaveRoomInternal(targetPlayerId)
-        logger.info("[RPC Server] Host kicked $targetPlayerId from room $roomId")
+        logger.info("Host ${operator.name} ($hostId) kicked $targetPlayerId from room $roomId, reason: $reason")
     }
 
     override suspend fun leaveRoom() {
-        val player = context.requirePlayer()
+        val player = context.getPlayer()
         refreshHeartbeatTimer(player.uuid)
         leaveRoomInternal(player.uuid)
     }
 
     override suspend fun sendSignal(targetPlayerId: Uuid, message: SignalingMessage) {
-        val sender = context.requirePlayer()
+        val sender = context.getPlayer()
         refreshHeartbeatTimer(sender.uuid)
         val targetFlow = playerEventFlows[targetPlayerId]
             ?: throw IllegalStateException("Target player $targetPlayerId is offline or unsubscribed")
@@ -193,7 +198,7 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun getRoomState(): RoomState {
-        val player = context.requirePlayer()
+        val player = context.getPlayer()
         refreshHeartbeatTimer(player.uuid)
         val roomId = kvRepository.getPlayerRoom(player.uuid)
             ?: throw IllegalStateException("Player ${player.uuid} is not in any room")
@@ -204,12 +209,10 @@ class MinecraftSignalingServiceImpl(
     }
 
     override suspend fun getRoomStateById(roomId: String): RoomState? {
-        val player = context.requirePlayer()
+        val player = context.getPlayer()
         refreshHeartbeatTimer(player.uuid)
         return kvRepository.getRoomState(roomId)
     }
-
-    override suspend fun acquireTurnCredentials(): TurnCredentials = fetchTurnCredentials()
 
     private suspend fun fetchTurnCredentials(): TurnCredentials = if (config.useCloudflareTurn) {
         httpClient.post(
@@ -225,13 +228,13 @@ class MinecraftSignalingServiceImpl(
 
     private suspend fun refreshHeartbeatTimer(playerId: Uuid) {
         refreshHeartbeatTimer(playerId, serverScope, heartbeatTimeoutMs) { timeoutPlayerId ->
-            logger.info("[RPC Server] Heartbeat timeout for player: $timeoutPlayerId. Force disconnecting...")
+            logger.info("getPlayerHeartbeat timeout for player: $timeoutPlayerId. Force disconnecting...")
             handlePlayerDisconnect(timeoutPlayerId)
         }
     }
 
     private suspend fun handlePlayerDisconnect(playerId: Uuid) {
-        logger.info("[RPC Server] Player disconnected/cleaned up: $playerId")
+        logger.info("getPlayerPlayer disconnected/cleaned up: $playerId")
         val job = playerHeartbeatJobs[playerId]
         playerHeartbeatJobs.remove(playerId)
         job?.cancel()
@@ -253,7 +256,7 @@ class MinecraftSignalingServiceImpl(
         if (isHost || remainingPlayers.isEmpty()) {
             kvRepository.deleteRoom(roomId)
             localRoomContexts.remove(roomId)
-            logger.info("[RPC Server] Room $roomId destroyed in KV (Host $playerId left or room empty).")
+            logger.info("getPlayerRoom $roomId destroyed in KV (Host $playerId left or room empty).")
             val closeEvent = SignalEvent.RoomClosed(
                 reason = if (isHost) "Host has closed or left the room." else "Room empty."
             )
@@ -274,7 +277,7 @@ class MinecraftSignalingServiceImpl(
     private suspend fun generateRoomId(): String {
         var id: String
         do {
-            id = (10000..99999).random().toString()
+            id = (10000000..99999999).random().toString()
         } while (kvRepository.roomExists(id))
         return id
     }

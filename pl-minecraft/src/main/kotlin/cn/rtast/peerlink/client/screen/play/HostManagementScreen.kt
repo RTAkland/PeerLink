@@ -4,10 +4,11 @@
  * Date: 2026/7/31
  */
 
-package cn.rtast.peerlink.client.screen
+package cn.rtast.peerlink.client.screen.play
 
 import cn.rtast.peerlink.client.PeerLink.Companion.rpcClient
 import cn.rtast.peerlink.client.util.HostPlayerStorage
+import cn.rtast.peerlink.client.util.asTooltip
 import cn.rtast.peerlink.data.play.PlayerInfo
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
@@ -125,8 +126,7 @@ class HostManagementScreen(
         init {
             val listWidth = this@HostManagementScreen.playerSelectionList?.rowWidth ?: 280
             val maxTextWidth = listWidth - 28 - 50 - 21 - 32
-            val uuidTooltip = Tooltip.create(Component.literal(playerInfo.uuid.toString()))
-
+            val uuidTooltip = Component.literal(playerInfo.uuid.toString()).asTooltip()
             this.playerNameWidget = StringWidget(
                 Component.literal(playerInfo.name),
                 this@HostManagementScreen.font

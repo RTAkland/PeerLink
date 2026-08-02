@@ -7,11 +7,13 @@
 
 package cn.rtast.peerlink.client.data
 
-enum class ConnectResult {
-    Awaiting,
-    Rejected,
-    Invalid,
-    Accepted,
-    SignalingError,
-    Failed
+import kotlin.uuid.Uuid
+
+sealed interface ConnectResult {
+    data class Awaiting(val host: Uuid) : ConnectResult
+    data object Rejected : ConnectResult
+    data object Invalid : ConnectResult
+    data object Accepted : ConnectResult
+    data object SignalingError : ConnectResult
+    data object Failed : ConnectResult
 }

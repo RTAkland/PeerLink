@@ -4,7 +4,7 @@
  * Date: 2026/7/28
  */
 
-package cn.rtast.peerlink.client.screen
+package cn.rtast.peerlink.client.screen.play
 
 import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.data.ConnectResult
@@ -25,7 +25,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     private val screenScope = CoroutineScope(Dispatchers.IO)
 
     companion object {
-        private val roomIdComponent = Component.translatable("peerlink.roomid")
+        private val roomIdComponent = Component.translatable("peerlink.sessionid")
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {
@@ -41,7 +41,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         this.roomIdEdit!!.setResponder { this.updateSelectButtonStatus() }
         this.addWidget(this.roomIdEdit!!)
         this.selectButton = this.addRenderableWidget(
-            Button.builder(Component.translatable("peerlink.joinRoom")) { joinRoom() }
+            Button.builder(Component.translatable("peerlink.joinSession")) { joinRoom() }
                 .bounds(this.width / 2 - 100, this.height / 4 + 96 + 12, 200, 20).build()
         )
         this.addRenderableWidget(
@@ -89,18 +89,32 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
             minecraft.gui.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
-                    { this.updateSelectButtonStatus() }
+                    { screen ->
+                        this.updateSelectButtonStatus()
+                        screen.hidePlayerHead()
+                    }
                 ) { screen ->
                     manager.connect(roomId) { result ->
                         when (result) {
-                            ConnectResult.Awaiting -> screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
-                            ConnectResult.Rejected -> screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
-                            ConnectResult.Invalid -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidRoomId"))
-                            ConnectResult.Accepted -> screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
-                            ConnectResult.SignalingError, ConnectResult.Failed -> screen.updateTitle(
-                                Component.translatable(
-                                    "peerlink.signalingRespondError"
-                                )
+                            is ConnectResult.Awaiting -> {
+                                screen.showPlayerHead(result.host)
+                                screen.updateTitle(Component.translatable("peerlink.waitingForHostApproval"))
+                                screen.startAwaitingCountdown(30)
+                            }
+
+                            is ConnectResult.Rejected -> {
+                                screen.updateTitle(Component.translatable("peerlink.hostRejectedJoinRequest"))
+                                screen.stopAwaitingCountdown()
+                            }
+
+                            is ConnectResult.Accepted -> {
+                                screen.updateTitle(Component.translatable("peerlink.p2p.connecting"))
+                                screen.stopAwaitingCountdown()
+                            }
+
+                            is ConnectResult.Invalid -> screen.updateTitle(Component.translatable("peerlink.signaling.invalidSessionId"))
+                            is ConnectResult.SignalingError, ConnectResult.Failed -> screen.updateTitle(
+                                Component.translatable("peerlink.signalingRespondError")
                             )
                         }
                     }

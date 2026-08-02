@@ -23,11 +23,6 @@ class ServiceContext(val attributes: Attributes = Attributes(true)) {
         attributes.put(PLAYER_KEY, player)
     }
 
-    fun getPlayer(): PlayerInfo? {
-        return attributes.getOrNull(PLAYER_KEY)
-    }
-
-    fun requirePlayer(): PlayerInfo {
-        return getPlayer() ?: throw IllegalStateException("Identity not registered, call registerIdentity first")
-    }
+    fun getPlayer(): PlayerInfo = attributes.getOrNull(PLAYER_KEY)
+        ?: throw IllegalStateException("Identity not registered, call registerIdentity first")
 }

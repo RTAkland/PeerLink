@@ -6,7 +6,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.data.PendingJoinRequest
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
@@ -47,7 +47,7 @@ class PendingJoinRequestsScreen(
 
     private fun startPollingRequests() {
         this.pollJob?.cancel()
-        this.pollJob = PeerLinkInitializer.manager!!.pendingRequestsFlow.onEach { requests ->
+        this.pollJob = PeerLink.manager!!.pendingRequestsFlow.onEach { requests ->
             if (requests.isNotEmpty()) updateRequestsUI(requests)
         }.launchIn(screenScope)
     }
@@ -163,8 +163,8 @@ class PendingJoinRequestsScreen(
             this.isProcessing = true
             this.acceptButton.active = false
             this.rejectButton.active = false
-            if (accept) PeerLinkInitializer.manager!!.acceptJoinRequest(request.applicantId)
-            else PeerLinkInitializer.manager!!.rejectJoinRequest(request.applicantId)
+            if (accept) PeerLink.manager!!.acceptJoinRequest(request.applicantId)
+            else PeerLink.manager!!.rejectJoinRequest(request.applicantId)
         }
     }
 

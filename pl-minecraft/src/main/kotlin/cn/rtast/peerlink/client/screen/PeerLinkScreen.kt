@@ -6,7 +6,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.data.ConnectResult
 import cn.rtast.peerlink.client.util.showNotification
 import kotlinx.coroutines.CoroutineScope
@@ -68,15 +68,15 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     private fun updateSelectButtonStatus() {
-        val isRpcConnected = PeerLinkInitializer.rpcClient?.isConnected == true
+        val isRpcConnected = PeerLink.rpcClient?.isConnected == true
         this.selectButton?.active = isRpcConnected && this.roomIdEdit!!.value.isNotBlank()
     }
 
     private fun joinRoom() {
         val roomId = roomIdEdit!!.value.trim()
         if (roomId.isBlank()) return
-        val manager = PeerLinkInitializer.manager ?: return
-        val rpcClient = PeerLinkInitializer.rpcClient
+        val manager = PeerLink.manager ?: return
+        val rpcClient = PeerLink.rpcClient
         if (rpcClient?.isConnected != true) {
             showNotification(
                 Component.translatable("peerlink.joinFailed"),

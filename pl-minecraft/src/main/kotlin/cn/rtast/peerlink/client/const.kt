@@ -17,7 +17,8 @@ import kotlin.uuid.toKotlinUuid
 val minecraft = Minecraft.getInstance()
 val scope = CoroutineScope(Dispatchers.IO)
 
-val currentPlayerInfo = PlayerInfo(minecraft.user.profileId.toKotlinUuid(), minecraft.user.name)
+val currentPlayerInfo
+    get() = PlayerInfo(minecraft.user.profileId.toKotlinUuid(), minecraft.user.name)
 
 val defaultConfig = PeerLinkClientConfig(
     "wss://peer.7o.ink"  // Thanks to xiaoman1221(github.com/xiaoman1221) for providing the signaling server

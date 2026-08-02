@@ -6,7 +6,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
 import cn.rtast.peerlink.client.util.HostPlayerStorage
 import cn.rtast.peerlink.client.util.showNotification
@@ -138,8 +138,8 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
             if (this.onlineMode != this.initialOnlineMode) {
                 (singleplayerServer as MinecraftServerAccessor).`peerlink$setOnlineMode`(this.onlineMode)
             }
-            val manager = PeerLinkInitializer.manager
-            val rpcClient = PeerLinkInitializer.rpcClient
+            val manager = PeerLink.manager
+            val rpcClient = PeerLink.rpcClient
             if (this.peerLinkEnabled) {
                 if (rpcClient?.isConnected != true) {
                     showNotification(

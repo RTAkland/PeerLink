@@ -6,7 +6,7 @@
 
 package cn.rtast.peerlink.client.screen
 
-import cn.rtast.peerlink.client.PeerLinkInitializer.Companion.rpcClient
+import cn.rtast.peerlink.client.PeerLink.Companion.rpcClient
 import cn.rtast.peerlink.client.util.HostPlayerStorage
 import cn.rtast.peerlink.data.play.PlayerInfo
 import com.mojang.authlib.GameProfile

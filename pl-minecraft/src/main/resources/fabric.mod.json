@@ -12,11 +12,11 @@
   },
   "license": "Apache-2.0",
   "icon": "assets/peerlink/textures/gui/sprites/icon/webrtc_multiplayer.png",
-  "environment": "*",
+  "environment": "client",
   "entrypoints": {
     "main": [
       {
-        "value": "cn.rtast.peerlink.client.PeerLinkInitializer",
+        "value": "cn.rtast.peerlink.client.PeerLink",
         "adapter": "kotlin"
       }
     ]

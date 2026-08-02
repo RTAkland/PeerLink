@@ -7,7 +7,7 @@
 
 package cn.rtast.peerlink.client.gui
 
-import cn.rtast.peerlink.client.PeerLinkInitializer.Companion.rpcClient
+import cn.rtast.peerlink.client.PeerLink.Companion.rpcClient
 import cn.rtast.peerlink.client.screen.PeerLinkHostScreen
 import cn.rtast.peerlink.client.screen.PeerLinkScreen
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents

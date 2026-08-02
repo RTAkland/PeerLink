@@ -7,10 +7,8 @@
 package cn.rtast.peerlink.client.network
 
 import cn.rtast.klogging.KLogging
-import cn.rtast.peerlink.client.PeerLinkInitializer
+import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.currentPlayerInfo
-import cn.rtast.peerlink.client.minecraft
-import cn.rtast.peerlink.data.play.PlayerInfo
 import cn.rtast.peerlink.service.AuthService
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.service.ServerSignalingService
@@ -88,7 +86,7 @@ class RpcClient(
                     val serverInfo = serverService?.serverInfo()
                     logger.info("Signaling Server Connected -> ${serverInfo?.version}")
                     authService!!.registerIdentity(currentPlayerInfo)
-                    PeerLinkInitializer.manager?.initialize()
+                    PeerLink.manager?.initialize()
                     coroutineScope {
                         startHeartbeatLoop(this@coroutineScope)
                         awaitCancellation()

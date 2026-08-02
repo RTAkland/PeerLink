@@ -4,9 +4,13 @@ PeerLink是一个基于WebRTC创建的联机模组, 复刻自`26.2-snapshot7`快
 
 想要使用PeerLink需要在Actions中找到对应平台的预构建jar.
 
+对于`windows-arm64`以及`linux-arm32`这两个平台, PeerLink不会预编译对应的Jar,
+请自行在对应平台构建
+
 # 实现细节
 
-信令服务器不再依赖于官方信令服务器, PeerLink重新实现了信令服务器. 目前可以创建房间获得房间ID, 通过此ID可以在另一个客户端加入游戏.
+信令服务器不再依赖于官方信令服务器, PeerLink重新实现了信令服务器. 
+目前可以创建房间获得房间ID, 通过此ID可以在另一个客户端加入游戏.
 
 ## NAT穿透
 
@@ -18,10 +22,17 @@ PeerLink是一个基于WebRTC创建的联机模组, 复刻自`26.2-snapshot7`快
 
 目前可用的信令服务器地址如下
 
-| 地址                              | 备注               | 来源                                          |
-|-----------------------------------|--------------------|-----------------------------------------------|
-| wss://peer.7o.ink                 | 内置默认信令服务器 | [xiaoman1221](https://github.com/xiaoman1221) |
-| wss://peerlink-signaling.rtast.cn | 不稳定             | [RTAkland](https://github.com/RTAkland)       |
+| 地址                              | 备注                           | TURN服务器                           | 来源                                          |
+|-----------------------------------|--------------------------------|--------------------------------------|-----------------------------------------------|
+| wss://peer.7o.ink                 | 内置默认信令服务器             | 中国大陆                             | [xiaoman1221](https://github.com/xiaoman1221) |
+| wss://peerlink-signaling.rtast.cn | 对于海外用户应使用此信令服务器 | Cloudflare TURN 服务(除中国大陆以外) | [RTAkland](https://github.com/RTAkland)       |
+
+## TURN服务器
+
+可用的STUN/TURN服务器列表
+
+1. Cloudflare STUN/TURN 服务器
+2. 由信令服务器下发的位于中国大陆的STUN/TURN服务器
 
 # 开源信息
 

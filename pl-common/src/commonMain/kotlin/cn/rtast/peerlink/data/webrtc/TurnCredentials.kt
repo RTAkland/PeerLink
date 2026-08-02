@@ -10,7 +10,7 @@ package cn.rtast.peerlink.data.webrtc
 import kotlinx.serialization.Serializable
 
 @Serializable
-data class OriginTurnCredentials(
+data class CloudflareTurnCredentials(
     val iceServers: List<ICEServers>,
 ) {
     @Serializable
@@ -21,7 +21,7 @@ data class OriginTurnCredentials(
     )
 }
 
-fun OriginTurnCredentials.toTurnCredentials(): TurnCredentials {
+fun CloudflareTurnCredentials.toTurnCredentials(): TurnCredentials {
     val stunServers = iceServers.flatMap { it.urls }
         .filter { it.startsWith("stun:", ignoreCase = true) || it.startsWith("stuns:", ignoreCase = true) }
     val turnServers = iceServers.flatMap { it.urls }
@@ -32,16 +32,19 @@ fun OriginTurnCredentials.toTurnCredentials(): TurnCredentials {
     val password = turnNode?.credential ?: ""
     return TurnCredentials(
         stunServers = stunServers,
-        turnServers = turnServers,
-        username = username,
-        password = password
+        turnServers = listOf(TurnCredentials.TurnServer(turnServers, username, password)),
     )
 }
 
 @Serializable
 data class TurnCredentials(
     val stunServers: List<String>,
-    val turnServers: List<String>,
-    val username: String,
-    val password: String,
-)
+    val turnServers: List<TurnServer>,
+) {
+    @Serializable
+    data class TurnServer(
+        val urls: List<String>,
+        val username: String,
+        val password: String,
+    )
+}

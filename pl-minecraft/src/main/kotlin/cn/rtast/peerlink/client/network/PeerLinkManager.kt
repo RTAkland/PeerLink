@@ -288,11 +288,13 @@ class PeerLinkManager(
         iceServers.add(RTCIceServer().apply {
             urls.addAll(credentials.stunServers)
         })
-        iceServers.add(RTCIceServer().apply {
-            urls.addAll(credentials.turnServers)
-            username = credentials.username
-            password = credentials.password
-        })
+        credentials.turnServers.forEach { turn ->
+            iceServers.add(RTCIceServer().apply {
+                urls.addAll(turn.urls)
+                username = turn.username
+                password = turn.password
+            })
+        }
     }
 
     private fun getOrCreateHandshake(

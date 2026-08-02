@@ -8,7 +8,7 @@ package cn.rtast.peerlink.signaling.service
 
 import cn.rtast.klogging.KLogging
 import cn.rtast.peerlink.data.play.*
-import cn.rtast.peerlink.data.webrtc.OriginTurnCredentials
+import cn.rtast.peerlink.data.webrtc.CloudflareTurnCredentials
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.data.webrtc.toTurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
@@ -217,8 +217,15 @@ class MinecraftSignalingServiceImpl(
                     header("Content-Type", "application/json")
                 }
                 setBody("{\"ttl\":86400}")
-            }.bodyAsText().fromJson<OriginTurnCredentials>().toTurnCredentials()
-        } else TurnCredentials(STUN_SERVERS!!.split(","), TURN_SERVERS!!.split(","), TURN_USERNAME!!, TURN_PASSWORD!!)
+            }.bodyAsText().fromJson<CloudflareTurnCredentials>().toTurnCredentials()
+        } else TurnCredentials(
+            STUN_SERVERS!!.split(","), listOf(
+                TurnCredentials.TurnServer(
+                    TURN_SERVERS!!.split(","),
+                    TURN_USERNAME!!, TURN_PASSWORD!!
+                )
+            )
+        )
     }
 
     private suspend fun refreshHeartbeatTimer(playerId: Uuid) {

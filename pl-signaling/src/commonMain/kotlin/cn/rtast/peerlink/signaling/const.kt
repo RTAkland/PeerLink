@@ -11,4 +11,4 @@ import io.ktor.client.*
 
 val httpClient = HttpClient {}
 
-const val SIGNALING_SERVER_VERSION = "0.1-INTERNAL-TEST"
+const val SIGNALING_SERVER_VERSION = "1.0-Alpha"

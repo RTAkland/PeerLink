@@ -28,10 +28,17 @@ TURN servers act as relays to guarantee successful connections.
 
 Available public signaling servers
 
-| Address                           | Comment                           | Provider                                      |
-|-----------------------------------|-----------------------------------|-----------------------------------------------|
-| wss://peer.7o.ink                 | Built-in default signaling server | [xiaoman1221](https://github.com/xiaoman1221) |
-| wss://peerlink-signaling.rtast.cn | Service server is unstable        | [RTAkland](https://github.com/RTAkland)       |
+| Address                           | Comment                           | Turn Server                                   | Provider                                      |
+|-----------------------------------|-----------------------------------|-----------------------------------------------|-----------------------------------------------|
+| wss://peer.7o.ink                 | Built-in default signaling server | Mainland China                                | [xiaoman1221](https://github.com/xiaoman1221) |
+| wss://peerlink-signaling.rtast.cn | For global users                  | Cloudflare(For global, except Mainland China) | [RTAkland](https://github.com/RTAkland)       |
+
+## TURN Servers
+
+Available STUN/TURN servers
+
+1. Cloudflare STUN/TURN
+2. STUN/TURN servers in mainland China assigned by the signaling server
 
 # Open source
 

@@ -11,4 +11,4 @@ import io.ktor.client.*
 
 val httpClient = HttpClient {}
 
-const val SIGNALING_SERVER_VERSION = "1.0-Alpha"
+const val SIGNALING_SERVER_VERSION = "2026-08-02"

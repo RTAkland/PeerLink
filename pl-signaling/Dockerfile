@@ -8,6 +8,4 @@ COPY pl-signaling.kexe ./pl-signaling.kexe
 
 RUN chmod +x ./pl-signaling.kexe
 
-EXPOSE 7879
-
 ENTRYPOINT ["./pl-signaling.kexe"]

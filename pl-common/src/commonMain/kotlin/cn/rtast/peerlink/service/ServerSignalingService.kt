@@ -13,7 +13,7 @@ import kotlinx.rpc.annotations.Rpc
 @Rpc
 interface ServerSignalingService {
     /**
-     * 获取信令服务器信息哦
+     * 获取信令服务器信息
      */
     suspend fun serverInfo(): ServerInfo
 }

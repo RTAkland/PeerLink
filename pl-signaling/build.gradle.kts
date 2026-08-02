@@ -22,7 +22,7 @@ kotlin {
             implementation(libs.ktor.server.websockets)
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.io)
-            implementation(libs.rethis)
+            implementation(libs.kotlinx.cli)
         }
 
         linuxX64Main.dependencies {

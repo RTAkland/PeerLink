@@ -13,9 +13,12 @@ import cn.rtast.peerlink.data.webrtc.TurnCredentials
 import cn.rtast.peerlink.data.webrtc.toTurnCredentials
 import cn.rtast.peerlink.service.MinecraftSignalingService
 import cn.rtast.peerlink.signaling.data.ServiceContext
+import cn.rtast.peerlink.signaling.data.SignalingServerConfig
 import cn.rtast.peerlink.signaling.httpClient
 import cn.rtast.peerlink.signaling.kv.CloudflareKvRepository
-import cn.rtast.peerlink.signaling.util.*
+import cn.rtast.peerlink.signaling.util.CLOUDFLARE_TURN_TOKEN_ID
+import cn.rtast.peerlink.signaling.util.CLOUDFLARE_TURN_TOKEN_KEY
+import cn.rtast.peerlink.signaling.util.CoroutineConcurrentMap
 import cn.rtast.peerlink.util.fromJson
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -30,6 +33,7 @@ class MinecraftSignalingServiceImpl(
     private val kvRepository: CloudflareKvRepository,
     private val serverScope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
     private val heartbeatTimeoutMs: Long = 30_000L,
+    private val config: SignalingServerConfig,
 ) : MinecraftSignalingService {
 
     private class LocalRoomContext(val roomId: String, val hostId: Uuid) {
@@ -207,26 +211,17 @@ class MinecraftSignalingServiceImpl(
 
     override suspend fun acquireTurnCredentials(): TurnCredentials = fetchTurnCredentials()
 
-    private suspend fun fetchTurnCredentials(): TurnCredentials {
-        return if (TURN_TYPE == "CLOUDFLARE") {
-            httpClient.post(
-                "https://rtc.live.cloudflare.com/v1/turn/keys/$CLOUDFLARE_TURN_TOKEN_ID/credentials/generate-ice-servers"
-            ) {
-                headers {
-                    header("Authorization", "Bearer $CLOUDFLARE_TURN_TOKEN_KEY")
-                    header("Content-Type", "application/json")
-                }
-                setBody("{\"ttl\":86400}")
-            }.bodyAsText().fromJson<CloudflareTurnCredentials>().toTurnCredentials()
-        } else TurnCredentials(
-            STUN_SERVERS!!.split(","), listOf(
-                TurnCredentials.TurnServer(
-                    TURN_SERVERS!!.split(","),
-                    TURN_USERNAME!!, TURN_PASSWORD!!
-                )
-            )
-        )
-    }
+    private suspend fun fetchTurnCredentials(): TurnCredentials = if (config.useCloudflareTurn) {
+        httpClient.post(
+            "https://rtc.live.cloudflare.com/v1/turn/keys/$CLOUDFLARE_TURN_TOKEN_ID/credentials/generate-ice-servers"
+        ) {
+            headers {
+                header("Authorization", "Bearer $CLOUDFLARE_TURN_TOKEN_KEY")
+                header("Content-Type", "application/json")
+            }
+            setBody("{\"ttl\":86400}")
+        }.bodyAsText().fromJson<CloudflareTurnCredentials>().toTurnCredentials()
+    } else config.customStunConfig
 
     private suspend fun refreshHeartbeatTimer(playerId: Uuid) {
         refreshHeartbeatTimer(playerId, serverScope, heartbeatTimeoutMs) { timeoutPlayerId ->

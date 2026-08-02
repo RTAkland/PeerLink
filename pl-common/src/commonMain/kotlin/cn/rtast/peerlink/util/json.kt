@@ -9,7 +9,10 @@ package cn.rtast.peerlink.util
 
 import kotlinx.serialization.json.Json
 
-val json = Json
+val json = Json {
+    encodeDefaults = true
+    prettyPrint = true
+}
 
 inline fun <reified T> String.fromJson(): T = json.decodeFromString(this)
 

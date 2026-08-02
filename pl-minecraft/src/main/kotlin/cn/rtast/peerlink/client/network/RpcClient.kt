@@ -73,10 +73,7 @@ class RpcClient(
                 try {
                     _connectionState.value = ConnectionState.CONNECTING
                     logger.info("Attempting connection to signaling server...")
-                    currentClient = HttpClient {
-                        install(WebSockets)
-                        install(Krpc) { serialization { json() } }
-                    }
+                    currentClient = HttpClient { install(WebSockets); install(Krpc) { serialization { json() } } }
                     client = currentClient
                     val rpcClient = currentClient.rpc("$signalingUrl/rpc")
                     authService = rpcClient.withService<AuthService>()
@@ -87,10 +84,7 @@ class RpcClient(
                     logger.info("Signaling Server Connected -> ${serverInfo?.version}")
                     authService!!.registerIdentity(currentPlayerInfo)
                     PeerLink.manager?.initialize()
-                    coroutineScope {
-                        startHeartbeatLoop(this@coroutineScope)
-                        awaitCancellation()
-                    }
+                    coroutineScope { startHeartbeatLoop(this@coroutineScope).join() }
                 } catch (e: CancellationException) {
                     if (_connectionState.value == ConnectionState.DISPOSING) {
                         throw e
@@ -115,25 +109,20 @@ class RpcClient(
         }
     }
 
-    private fun startHeartbeatLoop(sessionScope: CoroutineScope) {
-        stopHeartbeat()
-        heartbeatJob = sessionScope.launch {
-            while (isActive && _connectionState.value == ConnectionState.CONNECTED) {
-                delay(HEARTBEAT_INTERVAL_SECONDS.seconds)
+    private fun startHeartbeatLoop(sessionScope: CoroutineScope): Job {
+        return sessionScope.launch {
+            while (isActive) {
+                delay(15.seconds)
                 try {
-                    val sendTime = Clock.System.now().toEpochMilliseconds()
-                    signalingService?.sendHeartbeat(sendTime)
-                    val receiveTime = Clock.System.now().toEpochMilliseconds()
-                    val rtt = (receiveTime - sendTime).coerceAtLeast(0L)
-                    _latencyMs.value = rtt
-                } catch (e: CancellationException) {
-                    throw e
+                    val t = Clock.System.now().toEpochMilliseconds()
+                    signalingService!!.sendHeartbeat(t)
+                    _latencyMs.value = Clock.System.now().toEpochMilliseconds() - t
                 } catch (e: Exception) {
-                    _latencyMs.value = -1L
-                    throw ConnectionLostException("Heartbeat ping failed", e)
+                    stopHeartbeat()
+                    throw ConnectionLostException("Heartbeat lost", e)
                 }
             }
-        }
+        }.also { heartbeatJob = it }
     }
 
     private fun stopHeartbeat() {

@@ -216,7 +216,7 @@ class MinecraftSignalingServiceImpl(
                     header("Authorization", "Bearer $CLOUDFLARE_TURN_TOKEN_KEY")
                     header("Content-Type", "application/json")
                 }
-                setBody("{\"ttl\":3600}")
+                setBody("{\"ttl\":86400}")
             }.bodyAsText().fromJson<OriginTurnCredentials>().toTurnCredentials()
         } else TurnCredentials(STUN_SERVERS!!.split(","), TURN_SERVERS!!.split(","), TURN_USERNAME!!, TURN_PASSWORD!!)
     }

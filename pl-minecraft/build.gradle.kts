@@ -44,7 +44,14 @@ dependencies {
     shadow(libs.kotlinx.rpc.krpc.ktor.client)
     shadow(libs.ktor.client.cio)
     shadow(libs.webrtc.java.slim)
-    shadow(variantOf(libs.webrtc.java.slim) { classifier(platformClassifier) })
+
+    if (project.hasProperty("allLibrary")) {
+        listOf(
+            "linux-x86_64", "linux-aarch64",
+            "windows-x86_64", "windows-aarch64",
+            "macos-x86_64", "macos-aarch64"
+        ).forEach { classifier -> shadow(variantOf(libs.webrtc.java.slim) { classifier(classifier) }) }
+    } else shadow(variantOf(libs.webrtc.java.slim) { classifier(platformClassifier) })
 }
 
 tasks.processResources {
@@ -81,6 +88,11 @@ tasks.shadowJar {
     exclude("kotlinx/serialization/**")
     exclude("META-INF/*.kotlin_module")
     exclude("META-INF/kotlin/**")
+
+    archiveClassifier.set(
+        if (project.hasProperty("allLibrary")) "all-platforms"
+        else getTargetPlatformClassifier()
+    )
 }
 
 fun getTargetPlatformClassifier(): String {

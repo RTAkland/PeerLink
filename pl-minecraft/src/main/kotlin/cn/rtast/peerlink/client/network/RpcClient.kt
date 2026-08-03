@@ -6,7 +6,6 @@
 
 package cn.rtast.peerlink.client.network
 
-import cn.rtast.klogging.KLogging
 import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.currentPlayerInfo
 import cn.rtast.peerlink.service.AuthService
@@ -22,6 +21,7 @@ import kotlinx.rpc.krpc.ktor.client.Krpc
 import kotlinx.rpc.krpc.ktor.client.rpc
 import kotlinx.rpc.krpc.serialization.json.json
 import kotlinx.rpc.withService
+import org.slf4j.LoggerFactory
 import kotlin.time.Clock
 import kotlin.time.Duration.Companion.seconds
 
@@ -30,7 +30,7 @@ class RpcClient(
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.IO + SupervisorJob()),
 ) {
     companion object {
-        private val logger = KLogging.getLogger("PeerLinkRpcClient")
+        private val logger = LoggerFactory.getLogger("PeerLinkRpcClient")
         private const val HEARTBEAT_INTERVAL_SECONDS = 15L
     }
 

@@ -23,6 +23,7 @@ kotlin {
             implementation(libs.ktor.client.core)
             implementation(libs.kotlinx.io)
             implementation(libs.kotlinx.cli)
+            implementation(libs.klogging)
         }
 
         linuxX64Main.dependencies {

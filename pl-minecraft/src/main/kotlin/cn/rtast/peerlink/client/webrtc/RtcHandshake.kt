@@ -7,7 +7,6 @@
 
 package cn.rtast.peerlink.client.webrtc
 
-import com.mojang.logging.LogUtils
 import dev.kastle.webrtc.*
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -23,7 +22,6 @@ class RtcHandshake(
 ) {
     data class HandshakeResult(val peerConnection: RTCPeerConnection, val dataChannel: RTCDataChannel)
 
-    private val logger = LogUtils.getLogger()
     private val resultDeferred = CompletableDeferred<HandshakeResult>()
     private val handedOff = AtomicBoolean()
 

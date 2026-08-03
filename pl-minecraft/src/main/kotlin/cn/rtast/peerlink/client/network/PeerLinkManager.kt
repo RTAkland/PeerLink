@@ -22,7 +22,6 @@ import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
-import com.mojang.logging.LogUtils
 import dev.kastle.webrtc.PeerConnectionFactory
 import dev.kastle.webrtc.RTCConfiguration
 import dev.kastle.webrtc.RTCIceCandidate
@@ -42,6 +41,7 @@ import net.minecraft.network.protocol.login.ServerboundHelloPacket
 import net.minecraft.server.MinecraftServer
 import net.minecraft.server.network.ServerHandshakePacketListenerImpl
 import net.minecraft.world.level.GameType
+import org.slf4j.LoggerFactory
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
@@ -56,7 +56,7 @@ class PeerLinkManager(
     private val rpcClient: RpcClient,
     private val scope: CoroutineScope = CoroutineScope(Dispatchers.Default + SupervisorJob()),
 ) {
-    private val logger = LogUtils.getLogger()
+    private val logger = LoggerFactory.getLogger(PeerLinkManager::class.java)
     private val factory by lazy { PeerConnectionFactory() }
     private val handshakes = ConcurrentHashMap<Uuid, RtcHandshake>()
     private val pendingIceCandidates = ConcurrentHashMap<Uuid, ConcurrentLinkedQueue<RTCIceCandidate>>()
@@ -103,7 +103,7 @@ class PeerLinkManager(
                         updateRequestsFlow()
                         if (approved) rpcClient.signalingService?.respondJoinRequest(applicantUuid, true)
                         else rpcClient.signalingService?.respondJoinRequest(applicantUuid, false)
-                    }.onFailure {  }
+                    }.onFailure { }
                 }
             }
 

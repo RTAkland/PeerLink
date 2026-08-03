@@ -1,5 +1,6 @@
 # PeerLink
-| English | [Chinese](README_ZH.md) |
+
+| English | [中文](README-zh.md) |
 
 A Minecraft multiplayer mod based on WebRTC.
 

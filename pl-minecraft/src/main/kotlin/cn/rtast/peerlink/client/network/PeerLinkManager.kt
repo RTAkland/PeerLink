@@ -17,15 +17,13 @@ import cn.rtast.peerlink.client.webrtc.RtcChannel
 import cn.rtast.peerlink.client.webrtc.RtcHandshake
 import cn.rtast.peerlink.client.webrtc.deserializeCandidate
 import cn.rtast.peerlink.client.webrtc.serializeCandidate
+import cn.rtast.peerlink.client.webrtc.telemetry.ClientCandidateTypeTracker
 import cn.rtast.peerlink.data.play.JoinResponse
 import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
-import dev.kastle.webrtc.PeerConnectionFactory
-import dev.kastle.webrtc.RTCConfiguration
-import dev.kastle.webrtc.RTCIceCandidate
-import dev.kastle.webrtc.RTCIceServer
+import dev.kastle.webrtc.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import net.minecraft.client.Minecraft
@@ -58,7 +56,6 @@ class PeerLinkManager(
 ) {
     private val logger = LoggerFactory.getLogger(PeerLinkManager::class.java)
     private val factory by lazy { PeerConnectionFactory() }
-    private val handshakes = ConcurrentHashMap<Uuid, RtcHandshake>()
     private val pendingIceCandidates = ConcurrentHashMap<Uuid, ConcurrentLinkedQueue<RTCIceCandidate>>()
     private val remoteDescriptionReadyMap = ConcurrentHashMap<Uuid, AtomicBoolean>()
     private var eventListenJob: Job? = null
@@ -67,6 +64,7 @@ class PeerLinkManager(
     val pendingRequestsFlow = _pendingRequestsFlow.asStateFlow()
     private val turnCredentialsMap = ConcurrentHashMap<Uuid, TurnCredentials>()
     private var onConnectResult: (ConnectResult) -> Unit = {}
+    val handshakes = ConcurrentHashMap<Uuid, RtcHandshake>()
 
     suspend fun initialize() {
         eventListenJob?.cancel()
@@ -82,6 +80,7 @@ class PeerLinkManager(
         remoteDescriptionReadyMap.clear()
         handshakes.forEach { it.value.abort("Aborted") }
         pendingRequests.clear()
+        ClientCandidateTypeTracker.clearAll()
         factory.dispose()
     }
 
@@ -223,8 +222,10 @@ class PeerLinkManager(
                     turnCredentialsMap[hostUuid] = response.credentials
                     val rtcConfig = createRTCConfig(response.credentials)
                     val handshake = getOrCreateHandshake(hostUuid, isInitiator = true, rtcConfig)
-                    val offer = handshake.createOffer()
-                    signaling.sendSignal(hostUuid, _offer(hostUuid, offer))
+                    scope.launch {
+                        val offer = handshake.createOffer()
+                        signaling.sendSignal(hostUuid, _offer(hostUuid, offer))
+                    }
                     val result = withTimeout(20.seconds) { handshake.awaitResult() }
                     handshakes.remove(hostUuid, handshake)
                     startJoin(result)
@@ -273,6 +274,7 @@ class PeerLinkManager(
         pendingIceCandidates.remove(targetUuid)
         remoteDescriptionReadyMap.remove(targetUuid)
         turnCredentialsMap.remove(targetUuid)
+        ClientCandidateTypeTracker.unregisterPlayer(targetUuid)
     }
 
     private fun abortAll(reason: String) {
@@ -333,6 +335,8 @@ class PeerLinkManager(
                 password = turn.password
             })
         }
+        // for test turn server
+//        iceTransportPolicy = RTCIceTransportPolicy.RELAY
     }
 
     private fun getOrCreateHandshake(
@@ -350,6 +354,6 @@ class PeerLinkManager(
                     )
                 )
             }
-        }
+        }.also { handshake -> ClientCandidateTypeTracker.registerPlayer(targetUuid, handshake.peerConnection) }
     }
 }

@@ -40,6 +40,8 @@ dependencies {
     implementation(libs.webrtc.java.slim)
     implementation(variantOf(libs.webrtc.java.slim) { classifier(platformClassifier) })
 
+    testImplementation(kotlin("test"))
+
     shadow(project(":pl-common"))
     shadow(libs.kotlinx.rpc.krpc.ktor.client)
     shadow(libs.ktor.client.cio)

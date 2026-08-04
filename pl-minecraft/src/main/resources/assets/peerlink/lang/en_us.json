@@ -45,5 +45,15 @@
   "peerlink.options.saveNeedsRestart": "Changes will take effect after restart",
   "peerlink.kickedByHost": "You were kicked by the host",
   "peerlink.disconnected": "Disconnected",
-  "peerlink.hud.join_request": "%s Requests Join Game via PeerLink"
+  "peerlink.hud.join_request": "%s Requests Join Game via PeerLink",
+  "peerlink.p2p.candidate.host": "Host",
+  "peerlink.p2p.candidate.prflx": "P2P",
+  "peerlink.p2p.candidate.srflx": "P2P",
+  "peerlink.p2p.candidate.relay": "Relay",
+  "peerlink.p2p.candidate.unknown": "Unknown",
+  "peerlink.p2p.candidate.host.description": "You are the host or joined via LAN. Minimal to no latency, with no traffic passing through relay servers",
+  "peerlink.p2p.candidate.prflx.description": "You are connected to the host via P2P. Typically indicates one party has a restricted network environment, but latency remains low",
+  "peerlink.p2p.candidate.srflx.description": "You are directly connected to the host over the public internet. Excellent connection quality with very low latency",
+  "peerlink.p2p.candidate.relay.description": "Traffic is forwarded via a relay server as a direct P2P connection could not be established. Latency will be higher",
+  "peerlink.p2p.candidate.unknown.description": "Unknown connection type"
 }

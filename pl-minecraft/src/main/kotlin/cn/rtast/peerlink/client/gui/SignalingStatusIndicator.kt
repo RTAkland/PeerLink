@@ -11,6 +11,7 @@ import cn.rtast.peerlink.client.PeerLink.Companion.rpcClient
 import cn.rtast.peerlink.client.screen.SignalingServerOptionsScreen
 import cn.rtast.peerlink.client.screen.play.PeerLinkHostScreen
 import cn.rtast.peerlink.client.screen.play.PeerLinkScreen
+import cn.rtast.peerlink.client.util.toSpriteTexture
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.minecraft.client.Minecraft
@@ -20,6 +21,7 @@ import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
 import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen
+import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
@@ -80,27 +82,9 @@ object SignalingStatusIndicator {
         val size = 8 * SCALE
         val x = screenWidth - size - MARGIN
         val y = MARGIN
-        val highlight = if (rpcClient?.isConnected ?: false) 0xFF6EE7B7.toInt() else 0xFFFCA5A5.toInt()
-        val mainColor = if (rpcClient?.isConnected ?: false) 0xFF10B981.toInt() else 0xFFEF4444.toInt()
-        val shadow = if (rpcClient?.isConnected ?: false) 0xFF047857.toInt() else 0xFFB91C1C.toInt()
-
-        for (row in 0 until 8) {
-            for (col in 0 until 8) {
-                val char = pattern[row][col]
-                if (char == ' ') continue
-                val color = when (char) {
-                    'B' -> BORDER
-                    'L' -> highlight
-                    'G', 'R' -> mainColor
-                    'D' -> shadow
-                    else -> mainColor
-                }
-                val px = x + col * SCALE
-                val py = y + row * SCALE
-                guiGraphics.fill(px, py, px + SCALE, py + SCALE, color)
-            }
-        }
-
+        val isConnected = rpcClient?.isConnected ?: false
+        val texture = (if (isConnected) "signaling/connected" else "signaling/disconnected").toSpriteTexture()
+        guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, texture, x, y, 8 * SCALE, 8 * SCALE)
         if (mouseX in x..(x + size) && mouseY in y..(y + size)) {
             val statusText = if (rpcClient?.isConnected ?: false) {
                 val latency = rpcClient?.latencyMs?.value?.toInt() ?: -1

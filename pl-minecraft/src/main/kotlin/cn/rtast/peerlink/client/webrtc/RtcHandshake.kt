@@ -27,7 +27,7 @@ class RtcHandshake(
 
     @Volatile
     private var dataChannel: RTCDataChannel? = null
-    private val peerConnection = factory.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
+    val peerConnection: RTCPeerConnection = factory.createPeerConnection(rtcConfig, object : PeerConnectionObserver {
         override fun onIceCandidate(candidate: RTCIceCandidate) = onLocalCandidate(candidate)
         override fun onDataChannel(dataChannel: RTCDataChannel) = writeDataChannel(dataChannel)
         override fun onConnectionChange(state: RTCPeerConnectionState) {

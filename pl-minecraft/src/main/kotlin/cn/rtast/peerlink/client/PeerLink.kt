@@ -7,15 +7,18 @@
 
 package cn.rtast.peerlink.client
 
+import cn.rtast.peerlink.client.command.PeerLinkClientCommand
 import cn.rtast.peerlink.client.data.PeerLinkClientConfig
 import cn.rtast.peerlink.client.gui.HostJoinRequestNotifier
 import cn.rtast.peerlink.client.gui.SignalingStatusIndicator
 import cn.rtast.peerlink.client.network.PeerLinkManager
 import cn.rtast.peerlink.client.network.RpcClient
+import cn.rtast.peerlink.client.webrtc.telemetry.ClientCandidateTypeTracker
 import cn.rtast.peerlink.util.encodeJson
 import cn.rtast.peerlink.util.fromJson
 import kotlinx.coroutines.cancel
 import net.fabricmc.api.ModInitializer
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents
 import net.fabricmc.loader.api.FabricLoader
 import java.nio.file.Path
@@ -39,13 +42,19 @@ class PeerLink : ModInitializer {
 
     override fun onInitialize() {
         instance = this
+        registerCommand()
         ClientLifecycleEvents.CLIENT_STOPPING.register { _ -> shutdown() }
         initRpcAndManager(config.signalingServer)
         SignalingStatusIndicator.register()
         HostJoinRequestNotifier.register()
+        ClientCandidateTypeTracker.register()
     }
 
-    fun initRpcAndManager(signalingUrl: String) {
+    private fun registerCommand() {
+        ClientCommandRegistrationCallback.EVENT.register(PeerLinkClientCommand())
+    }
+
+    private fun initRpcAndManager(signalingUrl: String) {
         val rpc = RpcClient(signalingUrl, scope)
         rpcClient = rpc
         val peerLinkManager = PeerLinkManager(rpc, scope = scope)
@@ -53,7 +62,7 @@ class PeerLink : ModInitializer {
         rpc.start()
     }
 
-    fun shutdown() {
+    private fun shutdown() {
         scope.cancel()
         runCatching { manager?.destroy() }
         runCatching { rpcClient?.destroy() }

@@ -9,6 +9,7 @@ plugins {
     alias(libs.plugins.kotlinx.rpc)
     alias(libs.plugins.fabric.loom)
     alias(libs.plugins.shadow)
+    alias(libs.plugins.minotaur)
 }
 
 tasks.compileKotlin {
@@ -114,4 +115,21 @@ fun getTargetPlatformClassifier(): String {
         else -> error("Unsupported Architecture: ${arch.name}")
     }
     return "$osName-$archName"
+}
+
+modrinth {
+    token = System.getenv("MODRINTH_TOKEN")
+    projectId = "9VVdLpMT"
+    uploadFile.set(tasks.shadowJar)
+    gameVersions.addAll(libs.versions.minecraft.get())
+    dependencies {
+        required.project("fabric-api")
+        required.project("fabric-language-kotlin")
+    }
+
+    syncBodyFrom = rootProject.file("README.md").readText()
+}
+
+tasks.modrinth {
+    dependsOn(tasks.modrinthSyncBody)
 }

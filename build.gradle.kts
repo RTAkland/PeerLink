@@ -5,6 +5,7 @@ plugins {
     alias(libs.plugins.kotlinx.rpc) apply false
     alias(libs.plugins.fabric.loom) apply false
     alias(libs.plugins.shadow) apply false
+    alias(libs.plugins.minotaur) apply false
 }
 
 subprojects {

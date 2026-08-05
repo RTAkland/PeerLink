@@ -12,6 +12,7 @@ klogging = "0.1.6"
 shadow = "9.6.1"
 kotlinx-io = "0.9.1"
 kotlinx-cli = "0.3.6"
+minotaur = "2.9.0"
 
 [libraries]
 kotlinx-rpc-krpc-ktor-core = { module = "org.jetbrains.kotlinx:kotlinx-rpc-krpc-ktor-core", version.ref = "kotlinx-rpc" }
@@ -42,3 +43,4 @@ kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", versi
 kotlinx-rpc = { id = "org.jetbrains.kotlinx.rpc.plugin", version.ref = "kotlinx-rpc" }
 fabric-loom = { id = "net.fabricmc.fabric-loom", version.ref = "fabricLoom" }
 shadow = { id = "com.gradleup.shadow", version.ref = "shadow" }
+minotaur = { id = "com.modrinth.minotaur", version.ref = "minotaur" }

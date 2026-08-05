@@ -30,17 +30,6 @@ import net.minecraft.sounds.SoundEvents
 object SignalingStatusIndicator {
     private const val SCALE = 2
     private const val MARGIN = 10
-    private const val BORDER = 0xFF111827.toInt()
-    private val pattern = arrayOf(
-        "  BBBB  ",
-        " BLLGGB ",
-        "BLLGGGDB",
-        "BGGGGGDB",
-        "BGGGGDDB",
-        "BGGD3D3B",
-        " BDDDDB ",
-        "  BBBB  "
-    )
 
     fun register() {
         ScreenEvents.AFTER_INIT.register { client, screen, scaledWidth, _ ->

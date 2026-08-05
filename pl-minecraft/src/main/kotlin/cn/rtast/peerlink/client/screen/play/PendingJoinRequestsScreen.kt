@@ -28,9 +28,8 @@ import net.minecraft.world.entity.player.PlayerSkin
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
-class PendingJoinRequestsScreen(
-    private val lastScreen: Screen,
-) : Screen(Component.translatable("peerlink.pendingJoinRequests")) {
+class PendingJoinRequestsScreen(private val lastScreen: Screen) :
+    Screen(Component.translatable("peerlink.pendingJoinRequests")) {
     private val layout = HeaderAndFooterLayout(this)
     private var pendingRequestSelectionList: PendingRequestSelectionList? = null
     private val screenScope = CoroutineScope(Dispatchers.IO + SupervisorJob())

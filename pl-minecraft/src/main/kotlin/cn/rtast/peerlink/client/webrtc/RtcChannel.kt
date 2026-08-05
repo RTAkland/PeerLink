@@ -68,8 +68,8 @@ class RtcChannel(
     override fun isCompatible(loop: EventLoop): Boolean = loop is SingleThreadEventLoop
     override fun isOpen(): Boolean = !closed
     override fun isActive(): Boolean = activated && !closed
-    override fun localAddress0(): SocketAddress = InetSocketAddress("rtc-local-654321", 6)
-    override fun remoteAddress0(): SocketAddress = InetSocketAddress("rtc-remote-123456", 6)
+    override fun localAddress0(): SocketAddress = InetSocketAddress("rtc-local", 0)
+    override fun remoteAddress0(): SocketAddress = InetSocketAddress("rtc-remote", 0)
 
     override fun doRegister(promise: ChannelPromise) {
         val dc = handshakeResult.dataChannel

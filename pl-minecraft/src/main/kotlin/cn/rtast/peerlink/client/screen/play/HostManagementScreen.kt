@@ -30,9 +30,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
-class HostManagementScreen(
-    private val screen: Screen,
-) : Screen(Component.translatable("peerlink.hostManagement")) {
+class HostManagementScreen(private val screen: Screen) : Screen(Component.translatable("peerlink.hostManagement")) {
     private val layout = HeaderAndFooterLayout(this)
     private var playerSelectionList: PlayerSelectionList? = null
     private val screenScope = CoroutineScope(Dispatchers.IO + SupervisorJob())

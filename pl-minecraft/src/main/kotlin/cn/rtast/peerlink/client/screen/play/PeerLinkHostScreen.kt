@@ -43,12 +43,8 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     private val currentRoomIdComponent: Component
         get() = currentRoomState?.roomId?.let { Component.literal(it) } ?: PLACEHOLDER_ROOM_ID
 
-    private val roomIdButton = Button.builder(currentRoomIdComponent) {
-        val roomId = currentRoomState?.roomId
-        if (roomId != null) {
-            minecraft.keyboardHandler.clipboard = roomId
-            showNotification(Component.translatable("peerlink.sessionIdCopied"), null)
-        }
+    private val roomIdButton = Button.builder(currentRoomIdComponent) button@{ _ ->
+        currentRoomState?.roomId?.also { minecraft.keyboardHandler.clipboard = it }
     }.width(210).build()
 
     companion object {

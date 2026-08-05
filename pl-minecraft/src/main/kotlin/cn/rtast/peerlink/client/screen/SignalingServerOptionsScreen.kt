@@ -25,9 +25,7 @@ import net.minecraft.network.chat.Style
 import net.minecraft.network.chat.TextColor
 import kotlin.io.path.writeText
 
-class SignalingServerOptionsScreen(
-    private val parent: Screen,
-) : Screen(Component.translatable("peerlink.options")) {
+class SignalingServerOptionsScreen(private val parent: Screen) : Screen(Component.translatable("peerlink.options")) {
     private val layout = LinearLayout.vertical().spacing(8)
     private lateinit var addressEditBox: EditBox
 

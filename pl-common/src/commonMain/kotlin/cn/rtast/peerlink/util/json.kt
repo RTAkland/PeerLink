@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 val json = Json {
     encodeDefaults = true
     prettyPrint = true
+    ignoreUnknownKeys = true
 }
 
 inline fun <reified T> String.fromJson(): T = json.decodeFromString(this)

@@ -95,7 +95,8 @@ object SignalingStatusIndicator {
                 /* xo = */ mouseX,
                 /* yo = */ mouseY + 10,
                 /* positioner = */ DefaultTooltipPositioner.INSTANCE,
-                /* style = */ null
+                /* style = */ null,
+                /* extraSpaceAfterFirstLine = */ false
             )
         }
     }

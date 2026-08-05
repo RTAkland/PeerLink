@@ -250,9 +250,10 @@ class PeerLinkManager(
         onResponse: (RoomState) -> Unit,
     ) {
         if (!server.isPublished) {
+            server.defaultGameType = gameMode
             server.publishServer(
                 MinecraftServer.MultiplayerScope.LAN,
-                gameMode, allowCommands, Random.nextInt(20000, 30000)
+                allowCommands, Random.nextInt(20000, 30000)
             )
             (server as MinecraftServerAccessor).`peerlink$setOnlineMode`(onlineMode)
         }

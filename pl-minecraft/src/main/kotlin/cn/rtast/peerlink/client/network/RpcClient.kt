@@ -31,7 +31,6 @@ class RpcClient(
 ) {
     companion object {
         private val logger = LoggerFactory.getLogger("PeerLinkRpcClient")
-        private const val HEARTBEAT_INTERVAL_SECONDS = 15L
     }
 
     enum class ConnectionState {

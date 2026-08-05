@@ -12,6 +12,10 @@ plugins {
     alias(libs.plugins.minotaur)
 }
 
+base {
+    archivesName = "PeerLink-Fabric"
+}
+
 tasks.compileKotlin {
     compilerOptions.jvmTarget = JvmTarget.JVM_25
 }
@@ -132,4 +136,9 @@ modrinth {
 
 tasks.modrinth {
     dependsOn(tasks.modrinthSyncBody)
+}
+
+tasks.test {
+    useJUnitPlatform()
+    failOnNoDiscoveredTests = false
 }

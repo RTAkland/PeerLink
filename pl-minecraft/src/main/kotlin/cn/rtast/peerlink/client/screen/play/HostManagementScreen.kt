@@ -189,7 +189,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
             val server = minecraft.singleplayerServer ?: return
             val targetPlayer = server.playerList.getPlayer(playerInfo.uuid.toJavaUuid()) ?: return
             val source = server.createCommandSourceStack()
-            val messageKey = if (isOp) "commands.op.success" else "commands.deop.success"
+            val messageKey = if (isOp) "peerlink.commands.op.success" else "peerlink.commands.deop.success"
             source.sendSuccess({ Component.translatable(messageKey, playerInfo.name) }, true)
             server.playerList.sendPlayerPermissionLevel(targetPlayer)
         }

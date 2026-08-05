@@ -55,5 +55,11 @@
   "peerlink.p2p.candidate.prflx.description": "你和主机通过P2P连接, 通常情况下有一方的网络情况较差, 但延迟还是较低",
   "peerlink.p2p.candidate.srflx.description": "你和主机通过公网直接连接, 优秀的联通质量, 延迟通常非常低",
   "peerlink.p2p.candidate.relay.description": "你和主机通过中继服务器转发, 双方均无法通过P2P连接, 因此连接延迟较高, 并且会消耗TURN服务器流量",
-  "peerlink.p2p.candidate.unknown.description": "未知的连接方式"
+  "peerlink.p2p.candidate.unknown.description": "未知的连接方式",
+  "peerlink.otherPlayersOptions": "其他玩家的设置",
+  "peerlink.allowCommands": "允许命令",
+  "peerlink.gameMode": "游戏模式",
+  "peerlink.applyChanges": "应用更改",
+  "peerlink.commands.op.success": "已将%s设为服务器管理员",
+  "peerlink.commands.deop.success": "%s不再是服务器管理员了"
 }

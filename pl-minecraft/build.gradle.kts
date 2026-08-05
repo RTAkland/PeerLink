@@ -121,6 +121,7 @@ modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "9VVdLpMT"
     uploadFile.set(tasks.shadowJar)
+    versionType = if (version.toString().contains("snapshot")) "beta" else "release"
     gameVersions.addAll(libs.versions.minecraft.get())
     dependencies {
         required.project("fabric-api")

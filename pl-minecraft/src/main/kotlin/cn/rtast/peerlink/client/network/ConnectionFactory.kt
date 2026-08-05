@@ -17,7 +17,6 @@ import net.minecraft.util.debugchart.LocalSampleLogger
 import java.net.InetAddress
 import java.net.InetSocketAddress
 
-@Suppress("DEPRECATION")
 private val fallbackSocketAddress = InetSocketAddress(InetAddress.getLoopbackAddress(), 0)
 
 fun createConnection(channel: Channel, packetFlow: PacketFlow, bandwidthLogger: LocalSampleLogger?): Connection {

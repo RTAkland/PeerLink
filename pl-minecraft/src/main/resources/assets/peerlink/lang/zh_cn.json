@@ -45,7 +45,7 @@
   "peerlink.options.saveNeedsRestart": "配置需要在重启后生效",
   "peerlink.kickedByHost": "你已被踢出游戏",
   "peerlink.disconnected": "断开连接",
-  "peerlink.hud.join_request": "%s 请求通过PeerLink加入游戏",
+  "peerlink.hud.join_request": "%s 请求加入游戏",
   "peerlink.p2p.candidate.host": "主机",
   "peerlink.p2p.candidate.prflx": "P2P",
   "peerlink.p2p.candidate.srflx": "P2P",

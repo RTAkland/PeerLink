@@ -44,16 +44,14 @@ object SignalingStatusIndicator {
                 }
 
                 ScreenMouseEvents.afterMouseClick(screen).register { screen, event, _ ->
-                    if (event.buttonInfo.button == 0) {
-                        val size = 8 * SCALE
-                        val x = scaledWidth - size - MARGIN
-                        val y = MARGIN
-                        if (event.x in x.toDouble()..(x + size).toDouble() &&
-                            event.y in y.toDouble()..(y + size).toDouble()
-                        ) {
-                            client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f))
-                            client.gui.setScreen(SignalingServerOptionsScreen(screen))
-                        }
+                    val size = 8 * SCALE
+                    val x = scaledWidth - size - MARGIN
+                    val y = MARGIN
+                    if (event.x in x.toDouble()..(x + size).toDouble() &&
+                        event.y in y.toDouble()..(y + size).toDouble()
+                    ) {
+                        client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f))
+                        client.gui.setScreen(SignalingServerOptionsScreen(screen))
                     }
                     true
                 }

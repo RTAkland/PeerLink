@@ -11,8 +11,8 @@ import cn.rtast.peerlink.client.webrtc.telemetry.ClientCandidateTypeTracker
 import com.mojang.brigadier.Command
 import com.mojang.brigadier.CommandDispatcher
 import com.mojang.brigadier.context.CommandContext
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource
 import net.minecraft.commands.CommandBuildContext
 
@@ -22,8 +22,8 @@ class PeerLinkClientCommand : ClientCommandRegistrationCallback {
         buildContext: CommandBuildContext,
     ) {
         dispatcher.register(
-            ClientCommands.literal("peerlink").then(
-                ClientCommands.literal("ice").executes(::executeGetCandidateType)
+            ClientCommandManager.literal("peerlink").then(
+                ClientCommandManager.literal("ice").executes(::executeGetCandidateType)
             )
         )
     }

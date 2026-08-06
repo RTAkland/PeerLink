@@ -13,7 +13,7 @@ import cn.rtast.peerlink.data.play.PlayerInfo
 import com.mojang.authlib.GameProfile
 import kotlinx.coroutines.*
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.*
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout
@@ -87,13 +87,13 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
 
     override fun onClose() {
         this.screenScope.cancel()
-        this.minecraft.gui.setScreen(this.screen)
+        this.minecraft.setScreen(this.screen)
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, a)
+    override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
+        super.render(graphics, mouseX, mouseY, a)
         if (this.playerSelectionList?.hasNoPlayers() == true) {
-            graphics.centeredText(this.font, NO_PLAYERS_TEXT, this.width / 2, this.height / 2 - 20, -1)
+            graphics.drawCenteredString(this.font, NO_PLAYERS_TEXT, this.width / 2, this.height / 2 - 20, -1)
         }
     }
 
@@ -157,13 +157,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
         override fun children(): List<GuiEventListener> = this.childrenList
         override fun narratables(): List<NarratableEntry> = this.childrenList
 
-        override fun extractContent(
-            graphics: GuiGraphicsExtractor,
-            mouseX: Int,
-            mouseY: Int,
-            hovered: Boolean,
-            a: Float,
-        ) {
+        override fun renderContent(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, bl: Boolean, f: Float) {
             val x = this.contentX
             val y = this.contentY
             val headSize = 20
@@ -172,16 +166,16 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
             val javaUuid = UUID.fromString(playerInfo.uuid.toString())
             val skin = this.playerSkinFuture?.getNow(null)?.orElse(null)
                 ?: DefaultPlayerSkin.get(javaUuid)
-            PlayerFaceExtractor.extractRenderState(graphics, skin, headX, headY, headSize)
+            PlayerFaceRenderer.draw(guiGraphics, skin, headX, headY, headSize)
             val textX = headX + headSize + 8
             val textY = y + (this.contentHeight - this@HostManagementScreen.font.lineHeight) / 2
             this.playerNameWidget.setPosition(textX, textY)
-            this.playerNameWidget.extractWidgetRenderState(graphics, mouseX, mouseY, x.toFloat())
+            this.playerNameWidget.renderWidget(guiGraphics, mouseX, mouseY, x.toFloat())
             val buttonY = y + this.contentHeight / 2 - 10
             this.opButton.setPosition(x + this.contentWidth - 16 - 21 - 48, buttonY)
-            this.opButton.extractRenderState(graphics, mouseX, mouseY, a)
+            this.opButton.render(guiGraphics, mouseX, mouseY, f)
             this.kickButton.setPosition(x + this.contentWidth - 8 - 21, buttonY)
-            this.kickButton.extractRenderState(graphics, mouseX, mouseY, a)
+            this.kickButton.render(guiGraphics, mouseX, mouseY, f)
         }
 
         private fun toggleOpStatus(isOp: Boolean, playerInfo: PlayerInfo) {

@@ -18,11 +18,10 @@ import net.minecraft.resources.Identifier
 fun peerlinkIconButton(
     targetScreen: Screen,
     component: Component,
-    tooltip: Component? = null,
     icon: Identifier,
     x: Int = -1, y: Int = -1,
     width: Int = 16, height: Int = 16,
 ) = SpriteIconButton.builder(component, {
-    minecraft.execute { minecraft.gui.setScreen(targetScreen) }
-}, true).width(20).sprite(icon, width, height).tooltip(tooltip ?: component).build()
+    minecraft.execute { minecraft.setScreen(targetScreen) }
+}, true).width(20).sprite(icon, width, height).withTootip().build()
     .apply { if (x != -1) this.x = x; if (y != -1) this.y = y }

@@ -9,7 +9,9 @@ package cn.rtast.peerlink.client.screen.play
 import cn.rtast.peerlink.client.PeerLink
 import cn.rtast.peerlink.client.mixin.MinecraftServerAccessor
 import cn.rtast.peerlink.client.util.HostPlayerStorage
+import cn.rtast.peerlink.client.util.asTooltip
 import cn.rtast.peerlink.client.util.showNotification
+import cn.rtast.peerlink.client.util.toTranslatable
 import cn.rtast.peerlink.data.play.RoomState
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -21,7 +23,6 @@ import net.minecraft.client.gui.components.StringWidget
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.gui.screens.options.WorldOptionsScreen
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.world.level.GameType
@@ -49,13 +50,13 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
     companion object {
         private val PEERLINK_ENABLE_LABEL = Component.translatable("peerlink.screen.host.enable")
-        private val GAME_MODE_LABEL = Component.translatable("selectWorld.gameMode")
-        private val ALLOW_COMMANDS_LABEL = Component.translatable("selectWorld.allowCommands")
+        private val GAME_MODE_LABEL = Component.translatable("peerlink.mc.gamemode")
+        private val ALLOW_COMMANDS_LABEL = Component.translatable("peerlink.mc.allowCommands")
         private val ROOM_ID_HEADER =
             Component.translatable("peerlink.screen.host.sessionIdHeader").withStyle(ChatFormatting.GRAY)
-        private val OTHER_PLAYERS_HEADER = Component.translatable("menu.multiplayerOptions.otherPlayers.header")
+        private val OTHER_PLAYERS_HEADER = Component.translatable("peerlink.mc.othersOptions")
             .withStyle(ChatFormatting.UNDERLINE, ChatFormatting.BOLD)
-        private val APPLY_CHANGES = Component.translatable("menu.multiplayerOptions.applyChanges")
+        private val APPLY_CHANGES = Component.translatable("peerlink.mc.applyChanges")
         private val PLACEHOLDER_ROOM_ID = Component.translatable("peerlink.screen.host.sessionIdPlaceholder")
         private val ONLINE_MODE = Component.translatable("peerlink.screen.host.onlineMode")
         var currentRoomState: RoomState? = null
@@ -89,7 +90,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
         val otherPlayerSettings = content.addChild(LinearLayout.horizontal().spacing(8))
         otherPlayerSettings.defaultCellSetting().alignHorizontallyCenter()
 
-        this.gameMode = singleplayerServer.gameTypeForOtherPlayers
+        this.gameMode = singleplayerServer.defaultGameType
         this.initialGameMode = this.gameMode
         val gameModeButton = otherPlayerSettings.addChild(
             CycleButton.builder(GameType::getShortDisplayName, this.gameMode)
@@ -119,16 +120,16 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
         if (singleplayerServer.isHardcore) {
             gameModeButton.active = false
-            gameModeButton.setTooltip(WorldOptionsScreen.GAME_MODE_DISABLED_HARDCORE_TOOLTIP)
+            gameModeButton.setTooltip("peerlink.mc.gamemodeDisabledHardcore".toTranslatable().asTooltip())
             allowCommandsButton.active = false
-            allowCommandsButton.setTooltip(WorldOptionsScreen.ALLOW_COMMANDS_DISABLED_TOOLTIP)
+            allowCommandsButton.setTooltip("peerlink.mc.allowCommandsDisabledHardcore".toTranslatable().asTooltip())
         }
         val footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(8))
         this.applyChangesButton = Button.builder(APPLY_CHANGES) { button ->
             button.active = false
-            singleplayerServer.gameTypeForOtherPlayers = this.gameMode
+            singleplayerServer.defaultGameType = this.gameMode
             if (this.allowCommands != this.initialAllowCommands) {
-                singleplayerServer.setCommandsAllowedForOtherPlayers(this.allowCommands)
+                singleplayerServer.playerList.isAllowCommandsForAllPlayers = this.allowCommands
             }
             if (this.onlineMode != this.initialOnlineMode) {
                 (singleplayerServer as MinecraftServerAccessor).`peerlink$setOnlineMode`(this.onlineMode)
@@ -181,7 +182,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                 }
             } else {
                 minecraft.execute {
-                    singleplayerServer.unpublishServer()
+//                    singleplayerServer.stopServer() // TODO
                     this@PeerLinkHostScreen.initialPeerLinkEnabled = false
                     this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
                     this@PeerLinkHostScreen.initialGameMode = this@PeerLinkHostScreen.gameMode
@@ -215,7 +216,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     override fun onClose() {
-        this.minecraft.gui.setScreen(this.parent)
+        this.minecraft.setScreen(this.parent)
     }
 
     fun updateRoomId(roomIdComponent: Component, enabled: Boolean) {

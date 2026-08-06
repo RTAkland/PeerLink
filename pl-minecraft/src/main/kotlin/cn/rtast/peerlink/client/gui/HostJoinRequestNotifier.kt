@@ -11,7 +11,7 @@ import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
 import net.minecraft.resources.Identifier
@@ -45,17 +45,17 @@ object HostJoinRequestNotifier {
             VanillaHudElements.CHAT,
             Identifier.fromNamespaceAndPath("peerlink", "host_join_request_notifier")
         ) { graphics, _ ->
-            if (minecraft.gui.screen() == null) render(graphics)
+            if (minecraft.screen == null) render(graphics)
         }
 
         ScreenEvents.AFTER_INIT.register { _, screen, _, _ ->
-            ScreenEvents.afterExtract(screen).register { _, extractor, _, _, _ ->
+            ScreenEvents.afterRender(screen).register { _, extractor, _, _, _ ->
                 render(extractor)
             }
         }
     }
 
-    private fun render(graphics: GuiGraphicsExtractor) {
+    private fun render(graphics: GuiGraphics) {
         if (displayTicksLeft <= 0 || currentText == null) return
         val alphaProgress = when {
             displayTicksLeft > MAX_TICKS - FADE_IN_TICKS -> (MAX_TICKS - displayTicksLeft).toFloat() / FADE_IN_TICKS
@@ -76,6 +76,6 @@ object HostJoinRequestNotifier {
         graphics.fill(x, y, x + rectWidth, y + rectHeight, bgColor)
         graphics.fill(x, y, x + rectWidth, y + 2, accentColor)
         val textY = y + (rectHeight - 8) / 2
-        graphics.text(minecraft.font, currentText!!, x + 8, textY, textColor, true)
+        graphics.drawString(minecraft.font, currentText!!, x + 8, textY, textColor, true)
     }
 }

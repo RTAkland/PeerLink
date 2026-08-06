@@ -55,5 +55,11 @@
   "peerlink.p2p.candidate.prflx.description": "You are connected to the host via P2P. Typically indicates one party has a restricted network environment, but latency remains low",
   "peerlink.p2p.candidate.srflx.description": "You are directly connected to the host over the public internet. Excellent connection quality with very low latency",
   "peerlink.p2p.candidate.relay.description": "Traffic is forwarded via a relay server as a direct P2P connection could not be established. Latency will be higher",
-  "peerlink.p2p.candidate.unknown.description": "Unknown connection type"
+  "peerlink.p2p.candidate.unknown.description": "Unknown connection type",
+  "peerlink.mc.allowCommandsDisabledHardcore": "Cannot allow commands in a hardcore world.",
+  "peerlink.mc.gamemodeDisabledHardcore": "Cannot change game mode in a hardcore world.",
+  "peerlink.mc.applyChanges": "Apply Changes",
+  "peerlink.mc.gamemode": "Game Mode",
+  "peerlink.mc.allowCommands": "Allow Commands",
+  "peerlink.mc.othersOptions": "Options for other players"
 }

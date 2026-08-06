@@ -29,32 +29,33 @@ public abstract class PauseScreenMixin extends Screen {
         super(title);
     }
 
-    @Inject(
-            method = "createPauseMenu",
-            at = @At(
-                    value = "INVOKE",
-                    target = "Lnet/minecraft/client/gui/layouts/LinearLayout;addChild(Lnet/minecraft/client/gui/layouts/LayoutElement;)Lnet/minecraft/client/gui/layouts/LayoutElement;",
-                    shift = At.Shift.AFTER,
-                    ordinal = 3
-            )
-    )
-    private void peerlink$addPeerLinkHostScreenButton(CallbackInfo ci, @Local(name = "iconButtonRow") LinearLayout iconButtonRow) {
-        if (minecraft.isLocalServer()) {
-            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new PeerLinkHostScreen(this),
+    @Inject(method = "createPauseMenu", at = @At("TAIL"))
+    private void peerlink$addPeerLinkHostScreenButton(CallbackInfo ci) {
+        if (this.minecraft.isLocalServer()) {
+            LinearLayout topLeftLayout = LinearLayout.horizontal().spacing(4); // 4px 按钮间距
+            topLeftLayout.addChild(PeerLinkButtons.peerlinkIconButton(
+                    new PeerLinkHostScreen(this),
                     Component.translatable("peerlink.entrypoint.button"),
-                    null, Identifier.fromNamespaceAndPath("peerlink", "icon/webrtc_multiplayer"),
+                    Identifier.fromNamespaceAndPath("peerlink", "icon/webrtc_multiplayer"),
                     -1, -1
             ));
-            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(
+
+            topLeftLayout.addChild(PeerLinkButtons.peerlinkIconButton(
                     new PendingJoinRequestsScreen(this),
-                    Component.translatable("peerlink.pendingJoinRequests"), null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/pending_join_request"),
+                    Component.translatable("peerlink.pendingJoinRequests"),
+                    Identifier.fromNamespaceAndPath("peerlink", "icon/management/pending_join_request"),
                     -1, -1, 15, 15
             ));
-            iconButtonRow.addChild(PeerLinkButtons.peerlinkIconButton(new HostManagementScreen(this),
+
+            topLeftLayout.addChild(PeerLinkButtons.peerlinkIconButton(
+                    new HostManagementScreen(this),
                     Component.translatable("peerlink.hostManagement"),
-                    null, Identifier.fromNamespaceAndPath("peerlink", "icon/management/host_management"),
+                    Identifier.fromNamespaceAndPath("peerlink", "icon/management/host_management"),
                     -1, -1, 15, 14
             ));
+            topLeftLayout.arrangeElements();
+            topLeftLayout.setPosition(5, 5);
+            topLeftLayout.visitWidgets(this::addRenderableWidget);
         }
     }
 }

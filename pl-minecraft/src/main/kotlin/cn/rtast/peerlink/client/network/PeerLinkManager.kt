@@ -23,7 +23,10 @@ import cn.rtast.peerlink.data.play.RoomState
 import cn.rtast.peerlink.data.play.SignalEvent
 import cn.rtast.peerlink.data.play.SignalingMessage
 import cn.rtast.peerlink.data.webrtc.TurnCredentials
-import dev.kastle.webrtc.*
+import dev.kastle.webrtc.PeerConnectionFactory
+import dev.kastle.webrtc.RTCConfiguration
+import dev.kastle.webrtc.RTCIceCandidate
+import dev.kastle.webrtc.RTCIceServer
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import net.minecraft.client.Minecraft
@@ -170,7 +173,7 @@ class PeerLinkManager(
                     minecraft.execute {
                         if (minecraft.level != null || minecraft.singleplayerServer != null) {
                             minecraft.disconnectWithProgressScreen(false)
-                            minecraft.gui.setScreen(
+                            minecraft.setScreen(
                                 DisconnectedScreen(
                                     TitleScreen(),
                                     Component.translatable("peerlink.disconnected"),
@@ -250,10 +253,7 @@ class PeerLinkManager(
         onResponse: (RoomState) -> Unit,
     ) {
         if (!server.isPublished) {
-            server.publishServer(
-                MinecraftServer.MultiplayerScope.LAN,
-                gameMode, allowCommands, Random.nextInt(20000, 30000)
-            )
+            server.publishServer(gameMode, allowCommands, Random.nextInt(20000, 30000))
             (server as MinecraftServerAccessor).`peerlink$setOnlineMode`(onlineMode)
         }
         val signaling = rpcClient.signalingService

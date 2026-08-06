@@ -30,7 +30,7 @@ public abstract class MultiplayerScreenMixin extends Screen {
         int x = this.width - 30;
         int y = 5;
         this.addRenderableWidget(PeerLinkButtons.peerlinkIconButton(new PeerLinkScreen(this),
-                Component.translatable("peerlink.entrypoint.button"), null,
+                Component.translatable("peerlink.entrypoint.button"),
                 Identifier.fromNamespaceAndPath("peerlink","icon/webrtc_multiplayer"),
                 x, y
         ));

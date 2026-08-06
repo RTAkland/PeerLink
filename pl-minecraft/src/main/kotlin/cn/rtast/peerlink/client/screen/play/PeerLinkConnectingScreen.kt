@@ -8,10 +8,10 @@
 package cn.rtast.peerlink.client.screen.play
 
 import com.mojang.authlib.GameProfile
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.LoadingDotsWidget
-import net.minecraft.client.gui.components.PlayerFaceExtractor
+import net.minecraft.client.gui.components.PlayerFaceRenderer
 import net.minecraft.client.gui.layouts.FrameLayout
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
@@ -123,8 +123,8 @@ class PeerLinkConnectingScreen(
         }
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, a)
+    override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
+        super.render(graphics, mouseX, mouseY, a)
         if (this.showHead && this.loadingDotsWidget != null && this.currentProfile != null) {
             val dots = this.loadingDotsWidget!!
             val headSize = 32
@@ -132,7 +132,7 @@ class PeerLinkConnectingScreen(
             val headY = dots.y - headSize - 8
             val profile = this.currentProfile!!
             val skin = this.playerSkinFuture?.getNow(null)?.orElse(null) ?: DefaultPlayerSkin.get(profile.id)
-            PlayerFaceExtractor.extractRenderState(
+            PlayerFaceRenderer.draw(
                 graphics, skin.body.texturePath(), headX, headY,
                 headSize, true, false, -1
             )
@@ -149,7 +149,7 @@ class PeerLinkConnectingScreen(
 
     private fun cancel() {
         this.isAborted = true
-        this.minecraft.gui.setScreen(this.lastScreen)
+        this.minecraft.setScreen(this.lastScreen)
         onCancel(this)
     }
 }

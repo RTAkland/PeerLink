@@ -14,7 +14,7 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.*
 import net.minecraft.client.gui.components.events.GuiEventListener
 import net.minecraft.client.gui.layouts.HeaderAndFooterLayout
@@ -71,13 +71,13 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
 
     override fun onClose() {
         this.screenScope.cancel()
-        this.minecraft.gui.setScreen(this.lastScreen)
+        this.minecraft.setScreen(this.lastScreen)
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, a)
+    override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
+        super.render(graphics, mouseX, mouseY, a)
         if (this.pendingRequestSelectionList?.hasNoPendingRequests() == true) {
-            graphics.centeredText(this.font, NO_PENDING_REQUESTS_TEXT, this.width / 2, this.height / 2 - 20, -1)
+            graphics.drawCenteredString(this.font, NO_PENDING_REQUESTS_TEXT, this.width / 2, this.height / 2 - 20, -1)
         }
     }
 
@@ -130,8 +130,8 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
         override fun children(): List<GuiEventListener> = this.childrenList
         override fun narratables(): List<NarratableEntry> = this.childrenList
 
-        override fun extractContent(
-            graphics: GuiGraphicsExtractor,
+        override fun renderContent(
+            graphics: GuiGraphics,
             mouseX: Int,
             mouseY: Int,
             hovered: Boolean,
@@ -144,17 +144,17 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
             val headY = y + (this.contentHeight - headSize) / 2
             UUID.fromString(request.applicantId.toString()).let { javaUuid ->
                 val skin = this.playerSkinFuture?.getNow(null)?.orElse(null) ?: DefaultPlayerSkin.get(javaUuid)
-                PlayerFaceExtractor.extractRenderState(graphics, skin, headX, headY, headSize)
+                PlayerFaceRenderer.draw(graphics, skin, headX, headY, headSize)
             }
             val textX = headX + headSize + 8
             val textY = y + (this.contentHeight - this@PendingJoinRequestsScreen.font.lineHeight) / 2
             this.applicantNameWidget.setPosition(textX, textY)
-            this.applicantNameWidget.extractWidgetRenderState(graphics, mouseX, mouseY, x.toFloat())
+            this.applicantNameWidget.renderWidget(graphics, mouseX, mouseY, x.toFloat())
             val buttonY = y + this.contentHeight / 2 - 10
             this.acceptButton.setPosition(x + this.contentWidth - 16 - 42, buttonY)
-            this.acceptButton.extractRenderState(graphics, mouseX, mouseY, delta)
+            this.acceptButton.render(graphics, mouseX, mouseY, delta)
             this.rejectButton.setPosition(x + this.contentWidth - 8 - 21, buttonY)
-            this.rejectButton.extractRenderState(graphics, mouseX, mouseY, delta)
+            this.rejectButton.render(graphics, mouseX, mouseY, delta)
         }
 
         private fun handleRequest(accept: Boolean) {

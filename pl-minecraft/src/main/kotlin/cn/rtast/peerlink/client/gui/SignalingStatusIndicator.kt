@@ -15,7 +15,7 @@ import cn.rtast.peerlink.client.util.toSpriteTexture
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.fabricmc.fabric.api.client.screen.v1.ScreenMouseEvents
 import net.minecraft.client.Minecraft
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.PauseScreen
 import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
@@ -39,7 +39,7 @@ object SignalingStatusIndicator {
                 screen is PeerLinkHostScreen ||
                 screen is PeerLinkScreen
             ) {
-                ScreenEvents.afterExtract(screen).register { _, guiGraphics, mouseX, mouseY, _ ->
+                ScreenEvents.afterRender(screen).register { _, guiGraphics, mouseX, mouseY, _ ->
                     renderIndicator(guiGraphics, client, scaledWidth, mouseX, mouseY)
                 }
 
@@ -51,7 +51,7 @@ object SignalingStatusIndicator {
                         event.y in y.toDouble()..(y + size).toDouble()
                     ) {
                         client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f))
-                        client.gui.setScreen(SignalingServerOptionsScreen(screen))
+                        client.setScreen(SignalingServerOptionsScreen(screen))
                     }
                     true
                 }
@@ -60,7 +60,7 @@ object SignalingStatusIndicator {
     }
 
     private fun renderIndicator(
-        guiGraphics: GuiGraphicsExtractor,
+        guiGraphics: GuiGraphics,
         client: Minecraft,
         screenWidth: Int,
         mouseX: Int,
@@ -89,13 +89,13 @@ object SignalingStatusIndicator {
             } else Component.translatable("peerlink.signalingServerNotConnected")
                 .setStyle(Style.EMPTY.withColor(0xFF5555))
             val tooltip = ClientTooltipComponent.create(statusText.visualOrderText)
-            guiGraphics.tooltip(
+            guiGraphics.renderTooltip(
                 /* font = */ client.font,
-                /* lines = */ listOf(tooltip),
-                /* xo = */ mouseX,
-                /* yo = */ mouseY + 10,
-                /* positioner = */ DefaultTooltipPositioner.INSTANCE,
-                /* style = */ null
+                /* list = */ listOf(tooltip),
+                /* i = */ mouseX,
+                /* j = */ mouseY + 10,
+                /* clientTooltipPositioner = */ DefaultTooltipPositioner.INSTANCE,
+                /* identifier = */ null
             )
         }
     }

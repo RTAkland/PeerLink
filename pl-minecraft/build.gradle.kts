@@ -13,10 +13,10 @@ plugins {
 }
 
 tasks.compileKotlin {
-    compilerOptions.jvmTarget = JvmTarget.JVM_25
+    compilerOptions.jvmTarget = JvmTarget.JVM_21
 }
 
-val javaVersion = "25"
+val javaVersion = "21"
 
 tasks.compileJava {
     sourceCompatibility = javaVersion
@@ -31,9 +31,10 @@ dependencies {
     val platformClassifier = getTargetPlatformClassifier()
 
     minecraft(libs.minecraft)
-    implementation(libs.fabric.loader)
-    implementation(libs.fabric.api)
-    implementation(libs.fabric.language.kotlin)
+    mappings(loom.officialMojangMappings())
+    modImplementation(libs.fabric.loader)
+    modImplementation(libs.fabric.api)
+    modImplementation(libs.fabric.language.kotlin)
 
     implementation(project(":pl-common"))
     implementation(libs.kotlinx.rpc.krpc.ktor.client)

@@ -12,6 +12,7 @@ import cn.rtast.peerlink.client.data.PeerLinkClientConfig
 import cn.rtast.peerlink.client.defaultConfig
 import cn.rtast.peerlink.client.util.asTooltip
 import cn.rtast.peerlink.util.encodeJson
+import net.minecraft.ChatFormatting
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.components.StringWidget
@@ -22,7 +23,6 @@ import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
-import net.minecraft.network.chat.TextColor
 import kotlin.io.path.writeText
 
 class SignalingServerOptionsScreen(private val parent: Screen) : Screen(Component.translatable("peerlink.options")) {
@@ -54,7 +54,7 @@ class SignalingServerOptionsScreen(private val parent: Screen) : Screen(Componen
             this.saveAndClose()
         }.width(80).tooltip(
             Component.translatable("peerlink.options.saveNeedsRestart")
-                .setStyle(Style.EMPTY.withColor(TextColor.RED)).asTooltip()
+                .setStyle(Style.EMPTY.withColor(ChatFormatting.RED)).asTooltip()
         ).build()
 
         buttonLayout.addChild(defaultButton)
@@ -82,7 +82,7 @@ class SignalingServerOptionsScreen(private val parent: Screen) : Screen(Componen
     }
 
     override fun onClose() {
-        this.minecraft.gui.setScreen(this.parent)
+        this.minecraft.setScreen(this.parent)
     }
 
     override fun keyPressed(event: KeyEvent): Boolean {

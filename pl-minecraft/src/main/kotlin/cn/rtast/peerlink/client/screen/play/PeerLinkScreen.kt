@@ -11,7 +11,7 @@ import cn.rtast.peerlink.client.data.ConnectResult
 import cn.rtast.peerlink.client.util.showNotification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import net.minecraft.client.gui.GuiGraphicsExtractor
+import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
@@ -64,7 +64,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
     }
 
     override fun onClose() {
-        this.minecraft.gui.setScreen(this.parent)
+        this.minecraft.setScreen(this.parent)
     }
 
     private fun updateSelectButtonStatus() {
@@ -86,7 +86,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         }
         this.selectButton?.active = false
         try {
-            minecraft.gui.setScreen(
+            minecraft.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
                     { screen ->
@@ -126,10 +126,10 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         }
     }
 
-    override fun extractRenderState(graphics: GuiGraphicsExtractor, mouseX: Int, mouseY: Int, a: Float) {
-        super.extractRenderState(graphics, mouseX, mouseY, a)
-        graphics.centeredText(this.font, this.title, this.width / 2, 20, -1)
-        graphics.text(this.font, roomIdComponent, this.width / 2 - 100 + 1, 100, -6250336)
-        this.roomIdEdit!!.extractRenderState(graphics, mouseX, mouseY, a)
+    override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
+        super.render(graphics, mouseX, mouseY, a)
+        graphics.drawCenteredString(this.font, this.title, this.width / 2, 20, -1)
+        graphics.drawString(this.font, roomIdComponent, this.width / 2 - 100 + 1, 100, -6250336)
+        this.roomIdEdit!!.render(graphics, mouseX, mouseY, a)
     }
 }

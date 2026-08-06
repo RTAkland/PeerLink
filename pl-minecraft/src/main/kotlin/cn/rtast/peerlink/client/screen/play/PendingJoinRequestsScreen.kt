@@ -21,10 +21,10 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout
 import net.minecraft.client.gui.narration.NarratableEntry
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.resources.DefaultPlayerSkin
+import net.minecraft.client.resources.PlayerSkin
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
-import net.minecraft.world.entity.player.PlayerSkin
+import net.minecraft.resources.ResourceLocation
 import java.util.*
 import java.util.concurrent.CompletableFuture
 
@@ -38,7 +38,7 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
     override fun init() {
         this.layout.addTitleHeader(this.title, this.font)
         this.pendingRequestSelectionList =
-            PendingRequestSelectionList(this.minecraft).also { this.layout.addToContents(it) }
+            PendingRequestSelectionList(this.minecraft!!).also { this.layout.addToContents(it) }
         this.layout.addToFooter(Button.builder(CommonComponents.GUI_DONE) { this.onClose() }.width(200).build())
         this.layout.visitWidgets { this.addRenderableWidget(it) }
         this.repositionElements()
@@ -52,7 +52,7 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
         }.launchIn(screenScope)
     }
 
-    private fun updateRequestsUI(requests: List<PendingJoinRequest>) = minecraft.execute {
+    private fun updateRequestsUI(requests: List<PendingJoinRequest>) = minecraft?.execute {
         val selectionList = this.pendingRequestSelectionList ?: return@execute
         if (requests.isEmpty()) {
             selectionList.children().clear()
@@ -71,7 +71,7 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
 
     override fun onClose() {
         this.screenScope.cancel()
-        this.minecraft.setScreen(this.lastScreen)
+        this.minecraft?.setScreen(this.lastScreen)
     }
 
     override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
@@ -101,21 +101,24 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
         private val acceptButton: SpriteIconButton
         private val rejectButton: SpriteIconButton
         private val applicantNameWidget: StringWidget
-        private var playerSkinFuture: CompletableFuture<Optional<PlayerSkin>>? = null
+        private var playerSkinFuture: CompletableFuture<PlayerSkin>? = null
         private var isProcessing = false
 
         init {
             val listWidth = this@PendingJoinRequestsScreen.pendingRequestSelectionList?.rowWidth ?: 280
-            val maxTextWidth = listWidth - 32 - 32 - 42 - 28
+            val maxTextWidth = listWidth - 32 - 20 - 60
             val uuidTooltip = Component.literal("UUID: ${request.applicantId}").asTooltip()
             this.applicantNameWidget = StringWidget(
                 Component.literal(request.applicantName),
                 this@PendingJoinRequestsScreen.font
-            ).setMaxWidth(maxTextWidth).also { it.setTooltip(uuidTooltip) }
-            this.acceptButton = SpriteIconButton.builder(ACCEPT_REQUEST, { this.handleRequest(true) }, false)
-                .sprite(ACCEPT_SPRITE, 18, 18).size(21, 21).withTootip().build()
-            this.rejectButton = SpriteIconButton.builder(REJECT_REQUEST, { this.handleRequest(false) }, false)
-                .sprite(REJECT_SPRITE, 18, 18).size(21, 21).withTootip().build()
+            ).also {
+                it.width = maxTextWidth
+                it.tooltip = uuidTooltip
+            }
+            this.acceptButton = SpriteIconButton.builder(ACCEPT_REQUEST, { this.handleRequest(true) }, true)
+                .sprite(ACCEPT_SPRITE, 18, 18).size(21, 21).build()
+            this.rejectButton = SpriteIconButton.builder(REJECT_REQUEST, { this.handleRequest(false) }, true)
+                .sprite(REJECT_SPRITE, 18, 18).size(21, 21).build()
             this.childrenList.addAll(listOf(this.applicantNameWidget, this.acceptButton, this.rejectButton))
             this.loadPlayerSkin()
         }
@@ -123,38 +126,42 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
         private fun loadPlayerSkin() {
             val javaUuid = UUID.fromString(request.applicantId.toString())
             val profile = GameProfile(javaUuid, request.applicantName)
-            val skinManager = this@PendingJoinRequestsScreen.minecraft.skinManager
-            this.playerSkinFuture = skinManager.get(profile)
+            val skinManager = this@PendingJoinRequestsScreen.minecraft!!.skinManager
+            this.playerSkinFuture = skinManager.getOrLoad(profile)
         }
 
         override fun children(): List<GuiEventListener> = this.childrenList
         override fun narratables(): List<NarratableEntry> = this.childrenList
 
-        override fun renderContent(
-            graphics: GuiGraphics,
+        // name from mappings.dev
+        override fun render(
+            guiGraphics: GuiGraphics,
+            index: Int,
+            y: Int,
+            x: Int,
+            entryWidth: Int,
+            entryHeight: Int,
             mouseX: Int,
             mouseY: Int,
-            hovered: Boolean,
+            hoverd: Boolean,
             delta: Float,
         ) {
-            val x = this.contentX
-            val y = this.contentY
             val headSize = 20
             val headX = x + 8
-            val headY = y + (this.contentHeight - headSize) / 2
+            val headY = y + (entryHeight - headSize) / 2
             UUID.fromString(request.applicantId.toString()).let { javaUuid ->
-                val skin = this.playerSkinFuture?.getNow(null)?.orElse(null) ?: DefaultPlayerSkin.get(javaUuid)
-                PlayerFaceRenderer.draw(graphics, skin, headX, headY, headSize)
+                val skin = this.playerSkinFuture?.getNow(null) ?: DefaultPlayerSkin.get(javaUuid)
+                PlayerFaceRenderer.draw(guiGraphics, skin, headX, headY, headSize)
             }
             val textX = headX + headSize + 8
-            val textY = y + (this.contentHeight - this@PendingJoinRequestsScreen.font.lineHeight) / 2
+            val textY = y + (entryHeight - this@PendingJoinRequestsScreen.font.lineHeight) / 2
             this.applicantNameWidget.setPosition(textX, textY)
-            this.applicantNameWidget.renderWidget(graphics, mouseX, mouseY, x.toFloat())
-            val buttonY = y + this.contentHeight / 2 - 10
-            this.acceptButton.setPosition(x + this.contentWidth - 16 - 42, buttonY)
-            this.acceptButton.render(graphics, mouseX, mouseY, delta)
-            this.rejectButton.setPosition(x + this.contentWidth - 8 - 21, buttonY)
-            this.rejectButton.render(graphics, mouseX, mouseY, delta)
+            this.applicantNameWidget.renderWidget(guiGraphics, mouseX, mouseY, x.toFloat())
+            val buttonY = y + entryHeight / 2 - 10
+            this.acceptButton.setPosition(x + entryHeight - 16 - 42, buttonY)
+            this.acceptButton.render(guiGraphics, mouseX, mouseY, delta)
+            this.rejectButton.setPosition(x + entryHeight - 8 - 21, buttonY)
+            this.rejectButton.render(guiGraphics, mouseX, mouseY, delta)
         }
 
         private fun handleRequest(accept: Boolean) {
@@ -172,13 +179,7 @@ class PendingJoinRequestsScreen(private val lastScreen: Screen) :
         private val NO_PENDING_REQUESTS_TEXT = Component.translatable("peerlink.noPendingRequests")
         private val ACCEPT_REQUEST = Component.translatable("peerlink.accept")
         private val REJECT_REQUEST = Component.translatable("peerlink.reject")
-        private val ACCEPT_SPRITE = WidgetSprites(
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/accept"),
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/accept_highlighted")
-        )
-        private val REJECT_SPRITE = WidgetSprites(
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/reject"),
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/reject_highlighted")
-        )
+        private val ACCEPT_SPRITE = ResourceLocation("peerlink", "icon/management/accept")
+        private val REJECT_SPRITE = ResourceLocation("peerlink", "icon/management/reject")
     }
 }

@@ -15,11 +15,10 @@ import net.minecraft.client.gui.components.PlayerFaceRenderer
 import net.minecraft.client.gui.layouts.FrameLayout
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.input.KeyEvent
 import net.minecraft.client.resources.DefaultPlayerSkin
+import net.minecraft.client.resources.PlayerSkin
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.world.entity.player.PlayerSkin
 import java.util.*
 import java.util.concurrent.*
 import kotlin.concurrent.thread
@@ -41,7 +40,7 @@ class PeerLinkConnectingScreen(
     @Volatile
     private var showHead = false
     private var currentProfile: GameProfile? = null
-    private var playerSkinFuture: CompletableFuture<Optional<PlayerSkin>>? = null
+    private var playerSkinFuture: CompletableFuture<PlayerSkin>? = null
 
     private var countdownScheduler: ScheduledExecutorService? = null
     private var countdownFuture: ScheduledFuture<*>? = null
@@ -100,24 +99,24 @@ class PeerLinkConnectingScreen(
         this.countdownScheduler = null
     }
 
-    fun showPlayerHead(profile: GameProfile) = this.minecraft.execute {
+    fun showPlayerHead(profile: GameProfile) = this.minecraft?.execute {
         this.currentProfile = profile
         this.showHead = true
-        val skinManager = this.minecraft.skinManager
-        this.playerSkinFuture = skinManager.get(profile)
+        val skinManager = this.minecraft!!.skinManager
+        this.playerSkinFuture = skinManager.getOrLoad(profile)
     }
 
     fun showPlayerHead(uuid: Uuid, name: String? = null) =
         showPlayerHead(GameProfile(UUID.fromString(uuid.toString()), name ?: "Player"))
 
-    fun hidePlayerHead() = this.minecraft.execute {
+    fun hidePlayerHead() = this.minecraft?.execute {
         this.showHead = false
         this.currentProfile = null
         this.playerSkinFuture = null
     }
 
     fun updateTitle(newTitle: Component) {
-        this.minecraft.execute {
+        this.minecraft?.execute {
             this.loadingDotsWidget?.message = newTitle
             this.initialTitle = newTitle
         }
@@ -131,25 +130,25 @@ class PeerLinkConnectingScreen(
             val headX = (this.width - headSize) / 2
             val headY = dots.y - headSize - 8
             val profile = this.currentProfile!!
-            val skin = this.playerSkinFuture?.getNow(null)?.orElse(null) ?: DefaultPlayerSkin.get(profile.id)
+            val skin = this.playerSkinFuture?.getNow(null) ?: DefaultPlayerSkin.get(profile.id)
             PlayerFaceRenderer.draw(
-                graphics, skin.body.texturePath(), headX, headY,
-                headSize, true, false, -1
+                graphics, skin.texture, headX, headY,
+                headSize, true, false,
             )
         }
     }
 
-    override fun keyPressed(event: KeyEvent): Boolean {
-        if (event.isEscape) {
+    override fun keyPressed(i: Int, j: Int, k: Int): Boolean {
+        if (i == 256) {
             this.cancel()
             return true
         }
-        return super.keyPressed(event)
+        return super.keyPressed(i, j, k)
     }
 
     private fun cancel() {
         this.isAborted = true
-        this.minecraft.setScreen(this.lastScreen)
+        this.minecraft?.setScreen(this.lastScreen)
         onCancel(this)
     }
 }

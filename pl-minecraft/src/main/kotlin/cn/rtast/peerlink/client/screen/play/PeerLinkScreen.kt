@@ -11,11 +11,11 @@ import cn.rtast.peerlink.client.data.ConnectResult
 import cn.rtast.peerlink.client.util.showNotification
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.components.Button
 import net.minecraft.client.gui.components.EditBox
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 
@@ -28,11 +28,11 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         private val roomIdComponent = Component.translatable("peerlink.sessionid")
     }
 
-    override fun keyPressed(event: KeyEvent): Boolean {
-        if (this.selectButton?.active == true && this.focused === this.roomIdEdit && event.isConfirmation) {
+    override fun keyPressed(i: Int, j: Int, k: Int): Boolean {
+        if (this.selectButton?.active == true && this.focused === this.roomIdEdit && i == 256) {
             joinRoom()
             return true
-        } else return super.keyPressed(event)
+        } else return super.keyPressed(i, j, k)
     }
 
     override fun init() {
@@ -47,7 +47,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         this.addRenderableWidget(
             Button.builder(
                 CommonComponents.GUI_CANCEL
-            ) { minecraft.setScreenAndShow(parent) }
+            ) { minecraft?.setScreen(parent) }
                 .bounds(this.width / 2 - 100, this.height / 4 + 120 + 12, 200, 20).build()
         )
         this.updateSelectButtonStatus()
@@ -57,14 +57,14 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         this.setInitialFocus(this.roomIdEdit!!)
     }
 
-    override fun resize(width: Int, height: Int) {
+    override fun resize(minecraft: Minecraft, i: Int, j: Int) {
         val oldEdit = this.roomIdEdit!!.value
-        this.init(width, height)
+        this.init(minecraft, width, height)
         this.roomIdEdit!!.value = oldEdit
     }
 
     override fun onClose() {
-        this.minecraft.setScreen(this.parent)
+        this.minecraft?.setScreen(this.parent)
     }
 
     private fun updateSelectButtonStatus() {
@@ -86,7 +86,7 @@ class PeerLinkScreen(private val parent: Screen) : Screen(Component.translatable
         }
         this.selectButton?.active = false
         try {
-            minecraft.setScreen(
+            minecraft?.setScreen(
                 PeerLinkConnectingScreen(
                     this, Component.translatable("peerlink.signaling.waitingResponse"),
                     { screen ->

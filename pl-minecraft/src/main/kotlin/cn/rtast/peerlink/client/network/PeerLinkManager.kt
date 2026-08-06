@@ -33,7 +33,6 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.screens.DisconnectedScreen
 import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.multiplayer.ClientHandshakePacketListenerImpl
-import net.minecraft.client.multiplayer.LevelLoadTracker
 import net.minecraft.client.multiplayer.ServerData
 import net.minecraft.network.chat.Component
 import net.minecraft.network.protocol.PacketFlow
@@ -172,7 +171,7 @@ class PeerLinkManager(
                     abortAll("Kicked by host: ${event.reason}")
                     minecraft.execute {
                         if (minecraft.level != null || minecraft.singleplayerServer != null) {
-                            minecraft.disconnectWithProgressScreen(false)
+                            minecraft.disconnect()
                             minecraft.setScreen(
                                 DisconnectedScreen(
                                     TitleScreen(),
@@ -287,7 +286,7 @@ class PeerLinkManager(
     private fun startJoin(result: RtcHandshake.HandshakeResult) {
         val rtcChannel = RtcChannel(result)
         if (minecraft.level != null || minecraft.singleplayerServer != null)
-            minecraft.disconnectWithProgressScreen(false)
+            minecraft.disconnect()
         val connection = createConnection(
             rtcChannel, PacketFlow.CLIENTBOUND,
             minecraft.debugOverlay.bandwidthLogger
@@ -300,8 +299,7 @@ class PeerLinkManager(
                 LoginProtocols.CLIENTBOUND,
                 ClientHandshakePacketListenerImpl(
                     connection, minecraft, serverData,
-                    null, false, null, {},
-                    LevelLoadTracker(), null,
+                    null, false, null, {}, null
                 ), false
             )
             connection.send(ServerboundHelloPacket(minecraft.user.name, minecraft.user.profileId))

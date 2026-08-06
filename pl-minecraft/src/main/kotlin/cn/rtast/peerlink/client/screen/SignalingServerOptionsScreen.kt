@@ -19,7 +19,6 @@ import net.minecraft.client.gui.components.StringWidget
 import net.minecraft.client.gui.layouts.FrameLayout
 import net.minecraft.client.gui.layouts.LinearLayout
 import net.minecraft.client.gui.screens.Screen
-import net.minecraft.client.input.KeyEvent
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
@@ -82,14 +81,14 @@ class SignalingServerOptionsScreen(private val parent: Screen) : Screen(Componen
     }
 
     override fun onClose() {
-        this.minecraft.setScreen(this.parent)
+        this.minecraft?.setScreen(this.parent)
     }
 
-    override fun keyPressed(event: KeyEvent): Boolean {
-        if (event.isConfirmation) {
+    override fun keyPressed(i: Int, j: Int, k: Int): Boolean {
+        if (i == 256) { // ESC
             this.saveAndClose()
             return true
         }
-        return super.keyPressed(event)
+        return super.keyPressed(i, j, k)
     }
 }

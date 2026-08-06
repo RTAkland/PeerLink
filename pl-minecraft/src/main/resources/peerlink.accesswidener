@@ -2,3 +2,5 @@ accessWidener v2 named
 
 accessible field net/minecraft/client/gui/screens/ConnectScreen parent Lnet/minecraft/client/gui/screens/Screen;
 accessible field net/minecraft/client/gui/components/EditBox maxLength I
+
+accessible method net/minecraft/client/gui/components/AbstractSelectionList replaceEntries (Ljava/util/Collection;)V

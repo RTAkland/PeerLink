@@ -12,7 +12,7 @@ import io.netty.channel.Channel
 import io.netty.handler.timeout.ReadTimeoutHandler
 import net.minecraft.network.Connection
 import net.minecraft.network.protocol.PacketFlow
-import net.minecraft.server.network.EventLoopGroupHolder
+import net.minecraft.server.network.ServerConnectionListener
 import net.minecraft.util.debugchart.LocalSampleLogger
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -27,7 +27,8 @@ fun createConnection(channel: Channel, packetFlow: PacketFlow, bandwidthLogger: 
     val accessor = connection as ClientConnectionAccessor
     accessor.`peerlink$setChannel`(channel)
     accessor.`peerlink$setAddress`(channel.remoteAddress() ?: fallbackSocketAddress)
-    if (!channel.isRegistered) EventLoopGroupHolder.local().eventLoopGroup().register(channel).syncUninterruptibly()
+    if (!channel.isRegistered) ServerConnectionListener.SERVER_EPOLL_EVENT_GROUP.get().register(channel)
+        .syncUninterruptibly()
     channel.config().isAutoRead = true
     channel.pipeline().addLast("timeout", ReadTimeoutHandler(60))
     Connection.configureSerialization(channel.pipeline(), packetFlow, false, bandwidthMonitor)

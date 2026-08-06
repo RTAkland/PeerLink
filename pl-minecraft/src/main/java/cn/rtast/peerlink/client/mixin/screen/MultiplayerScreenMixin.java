@@ -12,7 +12,7 @@ import cn.rtast.peerlink.client.screen.play.PeerLinkScreen;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.multiplayer.JoinMultiplayerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -31,7 +31,7 @@ public abstract class MultiplayerScreenMixin extends Screen {
         int y = 5;
         this.addRenderableWidget(PeerLinkButtons.peerlinkIconButton(new PeerLinkScreen(this),
                 Component.translatable("peerlink.entrypoint.button"),
-                Identifier.fromNamespaceAndPath("peerlink","icon/webrtc_multiplayer"),
+                new ResourceLocation("peerlink", "icon/webrtc_multiplayer"),
                 x, y
         ));
     }

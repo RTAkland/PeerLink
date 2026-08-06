@@ -14,7 +14,7 @@ import net.minecraft.network.chat.Component
 
 fun showNotification(title: Component, message: Component?) {
     minecraft.execute {
-        minecraft.toastManager.addToast(
+        minecraft.toasts.addToast(
             SystemToast(
                 SystemToast.SystemToastId(3000L),
                 title, message

@@ -11,9 +11,8 @@ import cn.rtast.peerlink.client.screen.play.PeerLinkHostScreen;
 import cn.rtast.peerlink.client.util.HostPlayerStorage;
 import com.mojang.authlib.GameProfile;
 import kotlin.uuid.UuidKt;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.server.permissions.LevelBasedPermissionSet;
-import net.minecraft.server.permissions.PermissionSet;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.Level;
 import org.spongepowered.asm.mixin.Mixin;
@@ -24,16 +23,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(ServerPlayer.class)
 public abstract class PlayerPermissionMixin extends Player {
 
-    public PlayerPermissionMixin(Level level, GameProfile gameProfile) {
-        super(level, gameProfile);
+    public PlayerPermissionMixin(Level level, BlockPos blockPos, float f, GameProfile gameProfile) {
+        super(level, blockPos, f, gameProfile);
     }
 
-    @Inject(method = "permissions", at = @At("HEAD"), cancellable = true)
-    private void peerlink$injectPermission(CallbackInfoReturnable<PermissionSet> cir) {
+    @Inject(method = "getPermissionLevel", at = @At("HEAD"), cancellable = true)
+    private void peerlink$injectPermission(CallbackInfoReturnable<Integer> cir) {
         if (PeerLinkHostScreen.Companion.getCurrentRoomState() != null) {
-            var nameAndId = this.nameAndId();
-            if (HostPlayerStorage.isOp(UuidKt.toKotlinUuid(nameAndId.id()))) {
-                cir.setReturnValue(LevelBasedPermissionSet.OWNER);
+            if (HostPlayerStorage.isOp(UuidKt.toKotlinUuid(this.getGameProfile().getId()))) {
+                cir.setReturnValue(4);
             }
         }
     }

@@ -8,13 +8,11 @@ package cn.rtast.peerlink.client.gui
 
 import cn.rtast.peerlink.client.minecraft
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents
 import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
 import net.minecraft.sounds.SoundEvents
 
 object HostJoinRequestNotifier {
@@ -41,10 +39,7 @@ object HostJoinRequestNotifier {
             }
         }
 
-        HudElementRegistry.attachElementBefore(
-            VanillaHudElements.CHAT,
-            Identifier.fromNamespaceAndPath("peerlink", "host_join_request_notifier")
-        ) { graphics, _ ->
+        HudRenderCallback.EVENT.register { graphics, _ ->
             if (minecraft.screen == null) render(graphics)
         }
 

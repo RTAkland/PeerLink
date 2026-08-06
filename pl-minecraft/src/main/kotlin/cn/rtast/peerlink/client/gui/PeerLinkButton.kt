@@ -12,16 +12,16 @@ import cn.rtast.peerlink.client.minecraft
 import net.minecraft.client.gui.components.SpriteIconButton
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
 @JvmOverloads
 fun peerlinkIconButton(
     targetScreen: Screen,
     component: Component,
-    icon: Identifier,
+    icon: ResourceLocation,
     x: Int = -1, y: Int = -1,
     width: Int = 16, height: Int = 16,
-) = SpriteIconButton.builder(component, {
+): SpriteIconButton = SpriteIconButton.builder(component, {
     minecraft.execute { minecraft.setScreen(targetScreen) }
-}, true).width(20).sprite(icon, width, height).withTootip().build()
+}, true).width(20).sprite(icon, width, height).build()
     .apply { if (x != -1) this.x = x; if (y != -1) this.y = y }

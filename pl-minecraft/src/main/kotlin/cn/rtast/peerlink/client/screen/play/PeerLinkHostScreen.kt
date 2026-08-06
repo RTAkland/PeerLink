@@ -45,7 +45,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
         get() = currentRoomState?.roomId?.let { Component.literal(it) } ?: PLACEHOLDER_ROOM_ID
 
     private val roomIdButton = Button.builder(currentRoomIdComponent) button@{ _ ->
-        currentRoomState?.roomId?.also { minecraft.keyboardHandler.clipboard = it }
+        currentRoomState?.roomId?.also { minecraft?.keyboardHandler?.clipboard = it }
     }.width(210).build()
 
     companion object {
@@ -63,7 +63,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     override fun init() {
-        val singleplayerServer = minecraft.singleplayerServer
+        val singleplayerServer = minecraft!!.singleplayerServer
         if (singleplayerServer == null) {
             this.onClose()
             return
@@ -93,7 +93,8 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
         this.gameMode = singleplayerServer.defaultGameType
         this.initialGameMode = this.gameMode
         val gameModeButton = otherPlayerSettings.addChild(
-            CycleButton.builder(GameType::getShortDisplayName, this.gameMode)
+            CycleButton.builder(GameType::getShortDisplayName)
+                .withInitialValue(this.gameMode)
                 .withValues(GameType.SURVIVAL, GameType.SPECTATOR, GameType.CREATIVE, GameType.ADVENTURE)
                 .create(GAME_MODE_LABEL) { _, value ->
                     this.gameMode = value
@@ -120,9 +121,9 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
 
         if (singleplayerServer.isHardcore) {
             gameModeButton.active = false
-            gameModeButton.setTooltip("peerlink.mc.gamemodeDisabledHardcore".toTranslatable().asTooltip())
+            gameModeButton.tooltip = "peerlink.mc.gamemodeDisabledHardcore".toTranslatable().asTooltip()
             allowCommandsButton.active = false
-            allowCommandsButton.setTooltip("peerlink.mc.allowCommandsDisabledHardcore".toTranslatable().asTooltip())
+            allowCommandsButton.tooltip = "peerlink.mc.allowCommandsDisabledHardcore".toTranslatable().asTooltip()
         }
         val footer = this.layout.addToFooter(LinearLayout.horizontal().spacing(8))
         this.applyChangesButton = Button.builder(APPLY_CHANGES) { button ->
@@ -155,7 +156,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                             ) {
                                 currentRoomState = it
                                 HostPlayerStorage.init()
-                                minecraft.execute {
+                                minecraft?.execute {
                                     this@PeerLinkHostScreen.initialPeerLinkEnabled =
                                         this@PeerLinkHostScreen.peerLinkEnabled
                                     this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
@@ -166,7 +167,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                                 }
                             }
                         } catch (e: Exception) {
-                            minecraft.execute {
+                            minecraft?.execute {
                                 showNotification(
                                     Component.translatable("peerlink.sessionCreateFailed"),
                                     Component.literal(e.message ?: "Unknown Error")
@@ -181,7 +182,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
                     this.updateApplyChangesActiveState()
                 }
             } else {
-                minecraft.execute {
+                minecraft?.execute {
 //                    singleplayerServer.stopServer() // TODO
                     this@PeerLinkHostScreen.initialPeerLinkEnabled = false
                     this@PeerLinkHostScreen.initialOnlineMode = this@PeerLinkHostScreen.onlineMode
@@ -216,7 +217,7 @@ class PeerLinkHostScreen(private val parent: Screen) : Screen(Component.translat
     }
 
     override fun onClose() {
-        this.minecraft.setScreen(this.parent)
+        this.minecraft?.setScreen(this.parent)
     }
 
     fun updateRoomId(roomIdComponent: Component, enabled: Boolean) {

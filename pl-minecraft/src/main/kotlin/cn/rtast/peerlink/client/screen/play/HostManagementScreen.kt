@@ -20,10 +20,10 @@ import net.minecraft.client.gui.layouts.HeaderAndFooterLayout
 import net.minecraft.client.gui.narration.NarratableEntry
 import net.minecraft.client.gui.screens.Screen
 import net.minecraft.client.resources.DefaultPlayerSkin
+import net.minecraft.client.resources.PlayerSkin
 import net.minecraft.network.chat.CommonComponents
 import net.minecraft.network.chat.Component
-import net.minecraft.resources.Identifier
-import net.minecraft.world.entity.player.PlayerSkin
+import net.minecraft.resources.ResourceLocation
 import java.util.*
 import java.util.concurrent.CompletableFuture
 import kotlin.time.Duration.Companion.milliseconds
@@ -38,7 +38,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
 
     override fun init() {
         this.layout.addTitleHeader(this.title, this.font)
-        this.playerSelectionList = PlayerSelectionList(this.minecraft).also {
+        this.playerSelectionList = PlayerSelectionList(this.minecraft!!).also {
             this.layout.addToContents(it)
         }
 
@@ -55,9 +55,9 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
                 try {
                     val players = rpcClient?.signalingService?.getRoomState()
                         ?.members?.toMutableList()
-                        ?.also { it.removeIf { element -> element.uuid == minecraft.gameProfile.id.toKotlinUuid() } }
+                        ?.also { it.removeIf { element -> element.uuid == minecraft?.gameProfile?.id?.toKotlinUuid() } }
                         ?: emptyList()
-                    minecraft.execute { updatePlayerListUI(players) }
+                    minecraft?.execute { updatePlayerListUI(players) }
                 } catch (e: Exception) {
                     if (e is CancellationException) break
                     e.printStackTrace()
@@ -76,7 +76,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
         }
         selectionList.replaceEntries(updatedEntries)
         if (updatedEntries.isEmpty()) {
-            this.minecraft.narrator.saySystemQueued(NO_PLAYERS_TEXT)
+            this.minecraft?.narrator?.say(NO_PLAYERS_TEXT)
         }
     }
 
@@ -87,7 +87,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
 
     override fun onClose() {
         this.screenScope.cancel()
-        this.minecraft.setScreen(this.screen)
+        this.minecraft?.setScreen(this.screen)
     }
 
     override fun render(graphics: GuiGraphics, mouseX: Int, mouseY: Int, a: Float) {
@@ -108,7 +108,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
         fun hasNoPlayers(): Boolean = this.itemCount == 0
         fun removePlayerEntry(entry: PlayerEntry) {
             this.removeEntry(entry)
-            if (this.hasNoPlayers()) this@HostManagementScreen.minecraft.narrator.saySystemQueued(NO_PLAYERS_TEXT)
+            if (this.hasNoPlayers()) this@HostManagementScreen.minecraft?.narrator?.say(NO_PLAYERS_TEXT)
         }
     }
 
@@ -118,7 +118,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
         private val opButton: CycleButton<Boolean>
         private val kickButton: SpriteIconButton
         private val playerNameWidget: StringWidget
-        private var playerSkinFuture: CompletableFuture<Optional<PlayerSkin>>? = null
+        private var playerSkinFuture: CompletableFuture<PlayerSkin>? = null
         private var isProcessing = false
 
         init {
@@ -128,59 +128,71 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
             this.playerNameWidget = StringWidget(
                 Component.literal(playerInfo.name),
                 this@HostManagementScreen.font
-            ).setMaxWidth(maxTextWidth).also { it.setTooltip(uuidTooltip) }
+            ).also {
+                it.width = maxTextWidth
+                it.tooltip = uuidTooltip
+            }
             this.opButton = CycleButton.booleanBuilder(
                 Component.translatable("peerlink.operator"),
                 Component.translatable("peerlink.guest"),
-                playerInfo.isOp
-            ).displayOnlyValue().create(0, 0, 45, 20, Component.translatable("peerlink.opStatus")) { _, isNowOp ->
-                this.toggleOpStatus(isNowOp, playerInfo)
-            }
+            ).displayOnlyValue().withInitialValue(playerInfo.isOp)
+                .create(0, 0, 45, 20, Component.translatable("peerlink.opStatus")) { _, isNowOp ->
+                    this.toggleOpStatus(isNowOp, playerInfo)
+                }
             this.kickButton = SpriteIconButton.builder(KICK_PLAYER, { this.handleKick() }, false)
-                .sprite(KICK_SPRITE, 18, 18).size(21, 21).withTootip().build()
+                .sprite(KICK_SPRITE, 18, 18).size(21, 21).build()
             this.childrenList.addAll(listOf(this.playerNameWidget, this.opButton, this.kickButton))
             this.loadPlayerSkin()
         }
 
         fun updatePlayerInfo(newInfo: PlayerInfo) {
             this.playerInfo = newInfo
-            this.playerNameWidget.setMessage(Component.literal(newInfo.name))
+            this.playerNameWidget.message = Component.literal(newInfo.name)
         }
 
         private fun loadPlayerSkin() {
             val javaUuid = UUID.fromString(playerInfo.uuid.toString())
             val profile = GameProfile(javaUuid, playerInfo.name)
-            val skinManager = this@HostManagementScreen.minecraft.skinManager
-            this.playerSkinFuture = skinManager[profile]
+            val skinManager = this@HostManagementScreen.minecraft!!.skinManager
+            this.playerSkinFuture = skinManager.getOrLoad(profile)
         }
 
         override fun children(): List<GuiEventListener> = this.childrenList
         override fun narratables(): List<NarratableEntry> = this.childrenList
 
-        override fun renderContent(guiGraphics: GuiGraphics, mouseX: Int, mouseY: Int, bl: Boolean, f: Float) {
-            val x = this.contentX
-            val y = this.contentY
+        override fun render(
+            guiGraphics: GuiGraphics,
+            index: Int,
+            y: Int,
+            x: Int,
+            entryWidth: Int,
+            entryHeight: Int,
+            mouseX: Int,
+            mouseY: Int,
+            hovered: Boolean,
+            delta: Float,
+        ) {
             val headSize = 20
             val headX = x + 8
-            val headY = y + (this.contentHeight - headSize) / 2
+            val headY = y + (entryHeight - headSize) / 2
             val javaUuid = UUID.fromString(playerInfo.uuid.toString())
-            val skin = this.playerSkinFuture?.getNow(null)?.orElse(null)
+            val skin = this.playerSkinFuture?.getNow(null)
                 ?: DefaultPlayerSkin.get(javaUuid)
             PlayerFaceRenderer.draw(guiGraphics, skin, headX, headY, headSize)
             val textX = headX + headSize + 8
-            val textY = y + (this.contentHeight - this@HostManagementScreen.font.lineHeight) / 2
+            val textY = y + (entryHeight - this@HostManagementScreen.font.lineHeight) / 2
             this.playerNameWidget.setPosition(textX, textY)
             this.playerNameWidget.renderWidget(guiGraphics, mouseX, mouseY, x.toFloat())
-            val buttonY = y + this.contentHeight / 2 - 10
-            this.opButton.setPosition(x + this.contentWidth - 16 - 21 - 48, buttonY)
-            this.opButton.render(guiGraphics, mouseX, mouseY, f)
-            this.kickButton.setPosition(x + this.contentWidth - 8 - 21, buttonY)
-            this.kickButton.render(guiGraphics, mouseX, mouseY, f)
+            val buttonY = y + entryHeight / 2 - 10
+            this.opButton.setPosition(x + entryWidth - 16 - 21 - 48, buttonY)
+            this.opButton.render(guiGraphics, mouseX, mouseY, delta)
+            this.kickButton.setPosition(x + entryWidth - 8 - 21, buttonY)
+            this.kickButton.render(guiGraphics, mouseX, mouseY, delta)
         }
 
         private fun toggleOpStatus(isOp: Boolean, playerInfo: PlayerInfo) {
             HostPlayerStorage.setOp(playerInfo.uuid, playerInfo.name, isOp)
-            val server = minecraft.singleplayerServer ?: return
+            val server = minecraft?.singleplayerServer ?: return
             val targetPlayer = server.playerList.getPlayer(playerInfo.uuid.toJavaUuid()) ?: return
             val source = server.createCommandSourceStack()
             val messageKey = if (isOp) "commands.op.success" else "commands.deop.success"
@@ -199,7 +211,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
                 } catch (e: Exception) {
                     e.printStackTrace()
                 } finally {
-                    this@HostManagementScreen.minecraft.execute {
+                    this@HostManagementScreen.minecraft?.execute {
                         this@HostManagementScreen.playerSelectionList?.removePlayerEntry(this@PlayerEntry)
                     }
                 }
@@ -210,10 +222,7 @@ class HostManagementScreen(private val screen: Screen) : Screen(Component.transl
     private companion object {
         private val NO_PLAYERS_TEXT = Component.translatable("peerlink.noConnectedPlayers")
         private val KICK_PLAYER = Component.translatable("peerlink.kick")
-        private val KICK_SPRITE = WidgetSprites(
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/reject"),
-            Identifier.fromNamespaceAndPath("peerlink", "icon/management/reject_highlighted")
-        )
+        private val KICK_SPRITE = ResourceLocation("peerlink", "icon/management/reject")
     }
 
     private val PlayerInfo.isOp get() = HostPlayerStorage.isOp(this.uuid)

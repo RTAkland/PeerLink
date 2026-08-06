@@ -7,7 +7,8 @@
 
 package cn.rtast.peerlink.client.util
 
-import net.minecraft.resources.Identifier
+import net.minecraft.resources.ResourceLocation
 
-fun String.toSpriteTexture(): Identifier =
-    Identifier.fromNamespaceAndPath("peerlink", "icon/$this")
+
+fun String.toSpriteTexture(): ResourceLocation =
+    ResourceLocation("peerlink", "icon/$this")

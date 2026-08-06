@@ -19,9 +19,7 @@ import net.minecraft.client.gui.GuiGraphics
 import net.minecraft.client.gui.screens.PauseScreen
 import net.minecraft.client.gui.screens.TitleScreen
 import net.minecraft.client.gui.screens.inventory.tooltip.ClientTooltipComponent
-import net.minecraft.client.gui.screens.inventory.tooltip.DefaultTooltipPositioner
 import net.minecraft.client.gui.screens.worldselection.SelectWorldScreen
-import net.minecraft.client.renderer.RenderPipelines
 import net.minecraft.client.resources.sounds.SimpleSoundInstance
 import net.minecraft.network.chat.Component
 import net.minecraft.network.chat.Style
@@ -43,17 +41,16 @@ object SignalingStatusIndicator {
                     renderIndicator(guiGraphics, client, scaledWidth, mouseX, mouseY)
                 }
 
-                ScreenMouseEvents.afterMouseClick(screen).register { screen, event, _ ->
+                ScreenMouseEvents.afterMouseClick(screen).register { screen, mouseX, mouseY, _ ->
                     val size = 8 * SCALE
                     val x = scaledWidth - size - MARGIN
                     val y = MARGIN
-                    if (event.x in x.toDouble()..(x + size).toDouble() &&
-                        event.y in y.toDouble()..(y + size).toDouble()
+                    if (mouseX in x.toDouble()..(x + size).toDouble() &&
+                        mouseY in y.toDouble()..(y + size).toDouble()
                     ) {
                         client.soundManager.play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.0f))
                         client.setScreen(SignalingServerOptionsScreen(screen))
                     }
-                    true
                 }
             }
         }
@@ -71,7 +68,7 @@ object SignalingStatusIndicator {
         val y = MARGIN
         val isConnected = rpcClient?.isConnected ?: false
         val texture = (if (isConnected) "signaling/connected" else "signaling/disconnected").toSpriteTexture()
-        guiGraphics.blitSprite(RenderPipelines.GUI_TEXTURED, texture, x, y, 8 * SCALE, 8 * SCALE)
+        guiGraphics.blitSprite(texture, x, y, 8 * SCALE, 8 * SCALE)
         if (mouseX in x..(x + size) && mouseY in y..(y + size)) {
             val statusText = if (rpcClient?.isConnected ?: false) {
                 val latency = rpcClient?.latencyMs?.value?.toInt() ?: -1
@@ -88,14 +85,11 @@ object SignalingStatusIndicator {
                     .setStyle(Style.EMPTY.withColor(0xAAAAAA))
             } else Component.translatable("peerlink.signalingServerNotConnected")
                 .setStyle(Style.EMPTY.withColor(0xFF5555))
-            val tooltip = ClientTooltipComponent.create(statusText.visualOrderText)
             guiGraphics.renderTooltip(
-                /* font = */ client.font,
-                /* list = */ listOf(tooltip),
-                /* i = */ mouseX,
-                /* j = */ mouseY + 10,
-                /* clientTooltipPositioner = */ DefaultTooltipPositioner.INSTANCE,
-                /* identifier = */ null
+                client.font,
+                statusText,
+                mouseX,
+                mouseY + 10,
             )
         }
     }

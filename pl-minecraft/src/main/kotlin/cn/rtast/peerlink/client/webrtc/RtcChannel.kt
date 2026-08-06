@@ -71,7 +71,7 @@ class RtcChannel(
     override fun localAddress0(): SocketAddress = InetSocketAddress("rtc-local", 0)
     override fun remoteAddress0(): SocketAddress = InetSocketAddress("rtc-remote", 0)
 
-    override fun doRegister(promise: ChannelPromise) {
+    override fun doRegister() {
         val dc = handshakeResult.dataChannel
         val initialState = dc.state
         eventLoop().execute {
@@ -102,8 +102,6 @@ class RtcChannel(
                     }
                 }
             })
-
-            promise.setSuccess()
         }
     }
 

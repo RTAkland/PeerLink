@@ -4,12 +4,6 @@
 
 此功能是从 `Minecraft` 快照版本 `26.2-snapshot7` 中分支（fork）出来的，目前该功能在官方版本中已被移除。
 
-支持的 Minecraft 版本`26.2`
-
-PeerLink 没有针对`windows-arm64`特定`linux-arm32`平台预编译的 `JAR` 文件。如果您想在这些平台上使用 `PeerLink`，请从源代码构建。
-
-**注意：必须针对特定的平台进行编译。**
-
 # 实现细节
 
 PeerLink 使用专属的信令服务器来与其他 PeerLink 客户端进行通信。

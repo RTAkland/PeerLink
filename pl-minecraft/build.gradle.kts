@@ -128,9 +128,9 @@ modrinth {
         required.project("fabric-language-kotlin")
     }
 
-    syncBodyFrom = rootProject.file("README.md").readText()
+//    syncBodyFrom = rootProject.file("README.md").readText()
 }
 
-tasks.modrinth {
-    dependsOn(tasks.modrinthSyncBody)
-}
+//tasks.modrinth {
+//    dependsOn(tasks.modrinthSyncBody)
+//}
